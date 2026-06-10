@@ -1,0 +1,51 @@
+id,first_name,last_name,email,title,department,team,manager_id,start_date,location,employment_type,salary_usd,status
+1,Sarah,Chen,sarah.chen@nexova.io,VP of Engineering,Engineering,Platform Engineering,0,2019-03-15,Austin TX,Full-time,245000,Active
+2,Marcus,Williams,marcus.williams@nexova.io,Principal Software Engineer,Engineering,Platform Engineering,1,2019-08-01,Remote,Full-time,198000,Active
+3,Priya,Patel,priya.patel@nexova.io,Senior Software Engineer,Engineering,Platform Engineering,1,2020-04-20,Remote,Full-time,155000,Active
+4,James,O'Brien,james.obrien@nexova.io,Senior Software Engineer,Engineering,Platform Engineering,1,2020-09-14,Austin TX,Full-time,150000,Active
+5,Aisha,Kamau,aisha.kamau@nexova.io,Software Engineer II,Engineering,Platform Engineering,2,2021-06-07,Remote,Full-time,118000,Active
+6,Tyler,Rodriguez,tyler.rodriguez@nexova.io,Software Engineer II,Engineering,Platform Engineering,2,2022-01-10,Austin TX,Full-time,115000,Active
+7,Kenji,Tanaka,kenji.tanaka@nexova.io,Software Engineer I,Engineering,Platform Engineering,3,2023-07-17,Remote,Full-time,92000,Active
+8,Natalie,Frost,natalie.frost@nexova.io,Software Engineer I,Engineering,Platform Engineering,3,2024-01-08,Austin TX,Full-time,89000,Active
+9,David,Park,david.park@nexova.io,Engineering Manager Frontend,Engineering,Frontend Engineering,1,2020-02-03,New York NY,Full-time,185000,Active
+10,Emma,Schulz,emma.schulz@nexova.io,Senior Frontend Engineer,Engineering,Frontend Engineering,9,2020-11-16,Remote,Full-time,148000,Active
+11,Carlos,Mendez,carlos.mendez@nexova.io,Senior Frontend Engineer,Engineering,Frontend Engineering,9,2021-03-22,Austin TX,Full-time,145000,Active
+12,Yuki,Nakamura,yuki.nakamura@nexova.io,Frontend Engineer II,Engineering,Frontend Engineering,10,2022-05-09,Remote,Full-time,112000,Active
+13,Lena,Hoffmann,lena.hoffmann@nexova.io,Frontend Engineer II,Engineering,Frontend Engineering,10,2022-08-15,Remote,Full-time,110000,Active
+14,Ahmed,Hassan,ahmed.hassan@nexova.io,Frontend Engineer I,Engineering,Frontend Engineering,11,2024-03-04,Austin TX,Full-time,88000,Active
+15,Robert,Kim,robert.kim@nexova.io,Director of DevOps,Engineering,DevOps & Infrastructure,1,2019-11-18,Austin TX,Full-time,215000,Active
+16,Olivia,Turner,olivia.turner@nexova.io,Senior DevOps Engineer,Engineering,DevOps & Infrastructure,15,2020-07-27,Remote,Full-time,152000,Active
+17,Raj,Sharma,raj.sharma@nexova.io,Senior DevOps Engineer,Engineering,DevOps & Infrastructure,15,2021-01-11,Remote,Full-time,150000,Active
+18,Wei,Zhang,wei.zhang@nexova.io,DevOps Engineer II,Engineering,DevOps & Infrastructure,16,2022-04-25,Austin TX,Full-time,115000,Active
+19,Fatima,Al-Rashid,fatima.alrashid@nexova.io,DevOps Engineer I,Engineering,DevOps & Infrastructure,16,2023-09-05,Remote,Full-time,90000,Active
+20,Jennifer,Walsh,jennifer.walsh@nexova.io,VP of Product,Product,Product Management,0,2019-05-20,New York NY,Full-time,240000,Active
+21,Michael,Okafor,michael.okafor@nexova.io,Senior Product Manager,Product,Product Management,20,2020-08-10,Remote,Full-time,165000,Active
+22,Sophia,Larsen,sophia.larsen@nexova.io,Product Manager,Product,Product Management,20,2021-10-18,Austin TX,Full-time,140000,Active
+23,Daniel,Reeves,daniel.reeves@nexova.io,Associate Product Manager,Product,Product Management,21,2023-06-26,Austin TX,Full-time,105000,Active
+24,Isabella,Costa,isabella.costa@nexova.io,Design Lead,Product,Design & UX,20,2020-01-06,Remote,Full-time,162000,Active
+25,Noah,Bergmann,noah.bergmann@nexova.io,Senior UX Designer,Product,Design & UX,24,2020-10-14,Remote,Full-time,142000,Active
+26,Chloe,Kim,chloe.kim@nexova.io,UX Designer II,Product,Design & UX,24,2022-03-07,Austin TX,Full-time,112000,Active
+27,Ryan,Mitchell,ryan.mitchell@nexova.io,UX Designer I,Product,Design & UX,25,2023-11-13,Remote,Full-time,88000,Active
+28,Brandon,Scott,brandon.scott@nexova.io,VP of Sales,Sales,Sales & Revenue,0,2020-03-09,New York NY,Full-time,250000,Active
+29,Lauren,Petrov,lauren.petrov@nexova.io,Senior Account Executive,Sales,Sales & Revenue,28,2020-09-21,New York NY,Full-time,175000,Active
+30,Marcus,Chen,marcus.chen@nexova.io,Senior Account Executive,Sales,Sales & Revenue,28,2021-02-08,Remote,Full-time,172000,Active
+31,Vanessa,Torres,vanessa.torres@nexova.io,Account Executive,Sales,Sales & Revenue,29,2022-06-13,New York NY,Full-time,135000,Active
+32,Jordan,Lee,jordan.lee@nexova.io,Account Executive,Sales,Sales & Revenue,29,2022-11-07,Remote,Full-time,132000,Active
+33,Samantha,Wu,samantha.wu@nexova.io,Sales Development Representative,Sales,Sales & Revenue,30,2023-08-14,Austin TX,Full-time,75000,Active
+34,Alex,Morrison,alex.morrison@nexova.io,Sales Development Representative,Sales,Sales & Revenue,30,2024-02-19,Remote,Full-time,72000,Active
+35,Diana,Osei,diana.osei@nexova.io,Director of Customer Success,Customer Success,Customer Success,0,2019-09-30,Austin TX,Full-time,210000,Active
+36,Thomas,Nguyen,thomas.nguyen@nexova.io,Senior Customer Success Manager,Customer Success,Customer Success,35,2020-05-11,Remote,Full-time,145000,Active
+37,Brittany,Adams,brittany.adams@nexova.io,Senior Customer Success Manager,Customer Success,Customer Success,35,2021-01-25,New York NY,Full-time,142000,Active
+38,Kevin,Park,kevin.park@nexova.io,Customer Success Manager,Customer Success,Customer Success,36,2021-07-19,Remote,Full-time,115000,Active
+39,Michelle,Santos,michelle.santos@nexova.io,Customer Success Manager,Customer Success,Customer Success,36,2022-02-14,Austin TX,Full-time,112000,Active
+40,Andrew,Fletcher,andrew.fletcher@nexova.io,Customer Success Manager,Customer Success,Customer Success,37,2022-09-06,Remote,Full-time,110000,Active
+41,Zoe,Campbell,zoe.campbell@nexova.io,Customer Success Associate,Customer Success,Customer Success,38,2023-04-17,Austin TX,Full-time,78000,Active
+42,Nico,Ferrara,nico.ferrara@nexova.io,Customer Success Associate,Customer Success,Customer Success,38,2024-01-22,Remote,Full-time,76000,Active
+43,Victor,Huang,victor.huang@nexova.io,Director of Data & Analytics,Data,Data & Analytics,0,2020-04-06,Remote,Full-time,220000,Active
+44,Anastasia,Volkov,anastasia.volkov@nexova.io,Senior Data Scientist,Data,Data & Analytics,43,2021-02-01,Remote,Full-time,160000,Active
+45,Ethan,Brooks,ethan.brooks@nexova.io,Senior Data Engineer,Data,Data & Analytics,43,2021-06-14,Austin TX,Full-time,158000,Active
+46,Nadia,Okonkwo,nadia.okonkwo@nexova.io,Data Scientist II,Data,Data & Analytics,44,2022-03-21,Remote,Full-time,128000,Active
+47,Benjamin,Chase,benjamin.chase@nexova.io,Data Engineer II,Data,Data & Analytics,45,2022-07-11,Remote,Full-time,122000,Active
+48,Hana,Miyamoto,hana.miyamoto@nexova.io,Data Analyst II,Data,Data & Analytics,44,2023-01-09,Austin TX,Full-time,105000,Active
+49,Leo,Vasquez,leo.vasquez@nexova.io,Data Analyst I,Data,Data & Analytics,48,2023-10-02,Remote,Full-time,85000,Active
+50,Preethi,Krishnamurthy,preethi.krishnamurthy@nexova.io,Data Analyst I,Data,Data & Analytics,48,2024-04-15,Austin TX,Full-time,84000,Active
