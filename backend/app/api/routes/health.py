@@ -5,8 +5,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from app.config import Settings, get_settings
-from app.dependencies import get_knowledge_service, get_world_repository
+from app.dependencies import (
+    get_knowledge_service,
+    get_npc_repository,
+    get_world_repository,
+)
 from app.services.knowledge_service import KnowledgeService
+from app.services.npc_persistence import NPCRepository
 from app.services.world_persistence import WorldRepository
 
 router = APIRouter(tags=["system"])
@@ -17,6 +22,7 @@ async def health(
     settings: Settings = Depends(get_settings),
     service: KnowledgeService = Depends(get_knowledge_service),
     repository: WorldRepository = Depends(get_world_repository),
+    npc_repository: NPCRepository = Depends(get_npc_repository),
 ) -> dict:
     provider_health = await service.health()
     return {
@@ -26,4 +32,5 @@ async def health(
         "environment": settings.environment,
         "provider": provider_health.model_dump(),
         "world_generated": repository.exists(),
+        "npcs_generated": npc_repository.exists(),
     }
