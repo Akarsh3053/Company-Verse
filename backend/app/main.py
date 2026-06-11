@@ -8,7 +8,7 @@ Run with::
 
 On startup the world is auto-generated (if missing) so ``GET /world`` works
 immediately after boot. Auto-generation failures are logged and never block
-startup, which keeps the Foundry scaffold (and a missing dataset) non-fatal.
+startup.
 """
 
 from __future__ import annotations

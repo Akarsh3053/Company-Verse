@@ -52,8 +52,8 @@ logger = logging.getLogger("companyverse")
 # Field names the Foundry portal's ingestion pipeline commonly uses for
 # chunk content and document title.  We check them in order and use the first
 # that is non-empty.
-_CONTENT_FIELDS = ("chunk", "content", "page_chunk", "text", "body")
-_TITLE_FIELDS = ("title", "document_title", "name", "filename", "source_file")
+_CONTENT_FIELDS = ("snippet", "chunk", "content", "page_chunk", "text", "body")
+_TITLE_FIELDS = ("metadata_storage_name", "metadata_storage_path", "title", "document_title", "name", "filename")
 
 
 class FoundryConfigurationError(RuntimeError):
