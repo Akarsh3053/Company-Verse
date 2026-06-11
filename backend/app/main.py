@@ -21,7 +21,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import api_router
 from app.config import get_settings
-from app.dependencies import get_world_generator, get_world_repository
+from app.dependencies import (
+    get_npc_generator,
+    get_npc_repository,
+    get_world_generator,
+    get_world_repository,
+)
 
 logger = logging.getLogger("companyverse")
 
@@ -32,11 +37,11 @@ async def lifespan(app: FastAPI):
     settings.generated_dir.mkdir(parents=True, exist_ok=True)
 
     if settings.auto_generate_on_startup:
-        repository = get_world_repository()
-        if not repository.exists():
+        world_repository = get_world_repository()
+        if not world_repository.exists():
             try:
                 world = await get_world_generator().generate()
-                await repository.save(world)
+                await world_repository.save(world)
                 logger.info(
                     "Auto-generated world: %s regions, %s landmarks (provider=%s)",
                     world.metadata.region_count,
@@ -45,6 +50,22 @@ async def lifespan(app: FastAPI):
                 )
             except Exception as exc:  # noqa: BLE001 - non-fatal at startup
                 logger.warning("World auto-generation skipped: %s", exc)
+
+        # NPCs depend on a generated world (they bind to valid regions), so this
+        # runs after the world block. Failures are logged, never fatal.
+        npc_repository = get_npc_repository()
+        if not npc_repository.exists():
+            try:
+                npcs = await get_npc_generator().generate()
+                await npc_repository.save(npcs)
+                logger.info(
+                    "Auto-generated %s NPCs across %s regions (provider=%s)",
+                    npcs.metadata.npc_count,
+                    npcs.metadata.region_count,
+                    npcs.metadata.provider,
+                )
+            except Exception as exc:  # noqa: BLE001 - non-fatal at startup
+                logger.warning("NPC auto-generation skipped: %s", exc)
     yield
 
 
@@ -55,8 +76,8 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         description=(
             "CompanyVerse — transform enterprise knowledge into a playable "
-            "world. Milestone 1: world generation from the synthetic company "
-            "dataset."
+            "world. Milestone 1: world generation. Milestone 2: NPC generation "
+            "from the synthetic company dataset."
         ),
         lifespan=lifespan,
     )
@@ -82,6 +103,9 @@ def create_app() -> FastAPI:
                 "GET /health",
                 "POST /generate/world",
                 "GET /world",
+                "POST /generate/npcs",
+                "GET /npcs",
+                "GET /npcs/{npc_id}",
             ],
         }
 

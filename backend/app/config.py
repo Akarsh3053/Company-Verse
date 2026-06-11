@@ -74,6 +74,11 @@ class Settings(BaseSettings):
         """Absolute path to the generated ``world.json`` artifact."""
         return self.generated_dir / "world.json"
 
+    @property
+    def npcs_file(self) -> Path:
+        """Absolute path to the generated ``npcs.json`` artifact."""
+        return self.generated_dir / "npcs.json"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -14,11 +14,13 @@ from __future__ import annotations
 from functools import lru_cache
 
 from app.config import Settings, get_settings
+from app.generators.npc_generator import NPCGenerator
 from app.generators.world_generator import WorldGenerator
 from app.providers.base import KnowledgeProvider
 from app.providers.foundry import FoundryIQKnowledgeProvider
 from app.providers.local import LocalKnowledgeProvider
 from app.services.knowledge_service import KnowledgeService
+from app.services.npc_persistence import NPCRepository
 from app.services.world_persistence import WorldRepository
 
 
@@ -53,6 +55,21 @@ def get_world_generator() -> WorldGenerator:
     settings = get_settings()
     return WorldGenerator(
         get_knowledge_service(),
+        world_name=settings.world_name,
+        seed=settings.world_seed,
+    )
+
+
+@lru_cache
+def get_npc_repository() -> NPCRepository:
+    return NPCRepository(get_settings().generated_dir)
+
+
+def get_npc_generator() -> NPCGenerator:
+    settings = get_settings()
+    return NPCGenerator(
+        get_knowledge_service(),
+        get_world_repository(),
         world_name=settings.world_name,
         seed=settings.world_seed,
     )
