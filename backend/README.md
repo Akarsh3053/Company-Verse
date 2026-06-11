@@ -23,7 +23,7 @@ make the product fail to produce a renderable game.
 | Capability | Component | Status |
 |---|---|---|
 | **Generative AI** — writes quests, challenges, dialogue, narration, backstory, grounded chat | [`AzureOpenAIContentGenerator`](app/ai/azure_openai.py) → a model deployed in **Azure AI Foundry** | ✅ **Live.** Verified end-to-end with `gpt-5-mini` (`LLM_PROVIDER=foundry`). Grounded in the synthetic corpus; offline engine is the per-call fallback. |
-| **Foundry IQ** — semantic knowledge retrieval / grounding index | [`FoundryIQKnowledgeProvider`](app/providers/foundry.py) | ⚠️ **Scaffold.** Constructs, reports health, and switches via `PROVIDER=foundry` with no code change, but `search()`/data methods raise `NotImplementedError`. Retrieval today is served by `LocalKnowledgeProvider` keyword search over `org_data/`. |
+| **Foundry IQ** — semantic knowledge retrieval / grounding index | [`FoundryIQKnowledgeProvider`](app/providers/foundry.py) | ✅ **Live** (needs `SEARCH_API_KEY`). Hybrid design: `search()` uses `KnowledgeBaseRetrievalClient` against `knowledgebase312` on `onlyakarsh-8641-srch`; structured data methods delegate to `LocalKnowledgeProvider`. Falls back to local keyword search on any error. |
 | **Work IQ** — organizational graph (reporting lines, ownership, expertise) | [`WorkIQOrgGraphConnector`](app/providers/workiq.py) | ⚠️ **Scaffold (by design).** Per the brief, the connector stays in the code but disconnected; `LocalOrgGraphConnector` derives the graph from synthetic data for the demo. |
 
 **What this means for judging.** Content generation genuinely runs on an Azure AI
@@ -268,17 +268,19 @@ fully offline.
 > Reasoning models (the GPT-5 family) accept only the default and reject any
 > override with HTTP 400, so we always let the model use its default.
 
-### Foundry IQ knowledge provider — scaffold (`PROVIDER=foundry`)
+### Foundry IQ knowledge provider — live (`PROVIDER=foundry`)
 
 | Variable | Purpose |
 |----------|---------|
-| `PROJECT_ENDPOINT` | Azure AI Foundry *project* endpoint (reserved for the Foundry IQ / agent retrieval integration). |
-| `FOUNDRY_ENDPOINT` / `FOUNDRY_API_KEY` / `FOUNDRY_PROJECT` / `FOUNDRY_INDEX` | Connection + knowledge index for grounded retrieval. |
+| `SEARCH_ENDPOINT` | `https://<your-search-service>.search.windows.net` — the Azure AI Search service connected to the Foundry project. |
+| `FOUNDRY_INDEX` | Knowledge base name (e.g. `knowledgebase312`). |
+| `SEARCH_API_KEY` | Azure AI Search **query key** — Azure portal → Search service → **Keys** → Query keys. Falls back to `FOUNDRY_API_KEY`. |
+| `PROJECT_ENDPOINT` | Azure AI Foundry project endpoint (reserved for future agent integration). |
+| `FOUNDRY_API_KEY` | Foundry/OpenAI service key; also used as `SEARCH_API_KEY` fallback. |
 
-`FoundryIQKnowledgeProvider` constructs without credentials, reports health
-without raising, and raises `NotImplementedError` from data methods until the SDK
-integration lands. Setting `PROVIDER=foundry` switches the wiring with no other
-code change.
+> **Hybrid design.** `search()` calls the Foundry IQ knowledge base for semantic retrieval; all structured-data methods (`get_employees`, `get_teams`, etc.) are served by `LocalKnowledgeProvider` reading `org_data/` CSV files. Falls back to local keyword search on any search error so bundles always complete.
+>
+> **Diagnostic.** Run `.venv\Scripts\python.exe -m scripts.check_foundry_iq` to verify live connectivity.
 
 ---
 
@@ -307,5 +309,5 @@ pre-start checklist.
 - ✅ Real **Azure AI Foundry** model authors all content, grounded in synthetic data.
 - ✅ Synthetic dataset only (`org_data/`); no confidential data; no hardcoded quests.
 - ✅ Provider/LLM/org-graph seams in place — one config flip to go to prod.
-- ⚠️ **Foundry IQ retrieval index** not yet wired (provider is a scaffold).
+- ✅ **Foundry IQ knowledge base** wired (`KnowledgeBaseRetrievalClient` → `knowledgebase312`; `PROVIDER=foundry`). Needs `SEARCH_API_KEY`.
 - ⏭️ Next: Phaser/Next frontend that calls `POST /game/bundle` and renders the world.

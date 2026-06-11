@@ -42,11 +42,15 @@ from app.services.world_persistence import WorldRepository
 def build_provider(settings: Settings) -> KnowledgeProvider:
     """Construct the knowledge provider selected by configuration."""
     if settings.provider == "foundry":
+        local = LocalKnowledgeProvider(settings.data_dir)
         return FoundryIQKnowledgeProvider(
-            endpoint=settings.foundry_endpoint,
-            api_key=settings.foundry_api_key,
-            project=settings.foundry_project,
-            index=settings.foundry_index,
+            search_endpoint=settings.search_endpoint,
+            # Pass only the explicitly set SEARCH_API_KEY — never bleed the
+            # generative-AI FOUNDRY_API_KEY into the search client.
+            search_api_key=settings.search_api_key,
+            knowledge_base_name=settings.foundry_index,
+            use_aad=settings.azure_openai_use_aad,
+            local_fallback=local,
         )
     return LocalKnowledgeProvider(settings.data_dir)
 

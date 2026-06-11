@@ -10,3 +10,11 @@ pydantic-settings>=2.2,<3.0
 openai>=1.40,<2.0
 # Only needed for the keyless Microsoft Entra path (AZURE_OPENAI_USE_AAD=true).
 azure-identity>=1.25,<2.0
+# Foundry IQ knowledge base retrieval — required when PROVIDER=foundry.
+# Pinned to the beta that exposes KnowledgeBaseRetrievalClient.
+azure-search-documents==12.1.0b1
+# aiohttp (used by azure-search-documents async client) on Windows/Python 3.14
+# doesn't trust system root CAs; certifi provides a trusted bundle.
+certifi>=2024.0
+# azure-ai-projects is installed alongside for agent/project operations.
+azure-ai-projects>=2.2,<3.0

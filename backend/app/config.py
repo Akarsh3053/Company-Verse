@@ -74,13 +74,28 @@ class Settings(BaseSettings):
     )
 
     # --- Foundry IQ (knowledge provider) ---
+    # Legacy fields kept for backward compat; the live implementation uses
+    # search_endpoint + foundry_index + search_api_key (see below).
     foundry_endpoint: str | None = None
     foundry_api_key: str | None = None
     foundry_project: str | None = None
-    foundry_index: str | None = None
-    #: Azure AI Foundry *project* endpoint (PROJECT_ENDPOINT) — reserved for the
-    #: Foundry Agent / knowledge-retrieval integration.
+    #: Azure AI Foundry *project* endpoint (PROJECT_ENDPOINT).
     project_endpoint: str | None = None
+
+    # --- Foundry IQ: Azure AI Search connection ---
+    # SEARCH_ENDPOINT: the *.search.windows.net endpoint of the Azure AI Search
+    # service connected to the Foundry project.
+    search_endpoint: str | None = None
+    # SEARCH_API_KEY: the Azure AI Search *query key* (Azure portal →
+    # Search service → Keys → Query keys).  Falls back to FOUNDRY_API_KEY.
+    search_api_key: str | None = None
+    # FOUNDRY_INDEX: the knowledge base name (e.g. "knowledgebase312").
+    foundry_index: str | None = None
+
+    @property
+    def effective_search_api_key(self) -> str | None:
+        """Search query key; falls back to FOUNDRY_API_KEY."""
+        return self.search_api_key or self.foundry_api_key
 
     # --- Azure OpenAI / Foundry (generative AI — used when LLM_PROVIDER != local) ---
     azure_openai_endpoint: str | None = None
