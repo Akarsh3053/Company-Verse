@@ -1,6 +1,12 @@
-# CompanyVerse backend — Milestone 1
+# CompanyVerse backend
 # Python 3.10+
 fastapi>=0.110,<1.0
 uvicorn[standard]>=0.29,<1.0
 pydantic>=2.6,<3.0
 pydantic-settings>=2.2,<3.0
+
+# Generative AI — required when LLM_PROVIDER=azure_openai or foundry.
+# The default (LLM_PROVIDER=local) offline engine needs none of these.
+openai>=1.40,<2.0
+# Only needed for the keyless Microsoft Entra path (AZURE_OPENAI_USE_AAD=true).
+azure-identity>=1.25,<2.0

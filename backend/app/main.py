@@ -75,9 +75,10 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         version=settings.app_version,
         description=(
-            "CompanyVerse — transform enterprise knowledge into a playable "
-            "world. Milestone 1: world generation. Milestone 2: NPC generation "
-            "from the synthetic company dataset."
+            "CompanyVerse — transform enterprise knowledge into a personalized, "
+            "playable onboarding game. POST a new joiner's persona to "
+            "/game/bundle to get a full, AI-generated, knowledge-grounded "
+            "GameBundle (world, player, NPCs, quests, challenges, dialogue)."
         ),
         lifespan=lifespan,
     )
@@ -106,7 +107,12 @@ def create_app() -> FastAPI:
                 "POST /generate/npcs",
                 "GET /npcs",
                 "GET /npcs/{npc_id}",
+                "POST /game/bundle",
+                "GET /game/bundle/{user_key}",
+                "GET /game/bundles",
+                "POST /game/chat",
             ],
+            "llm_provider": settings.llm_provider,
         }
 
     return app

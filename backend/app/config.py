@@ -42,6 +42,18 @@ class Settings(BaseSettings):
     # code change is required to flip providers.
     provider: Literal["local", "foundry"] = "local"
 
+    # --- Generative AI provider selection ---
+    # local        -> offline deterministic content engine (default; no creds)
+    # azure_openai -> Azure OpenAI chat model
+    # foundry      -> Azure AI Foundry chat model (Azure OpenAI compatible)
+    # Switching this requires no code changes (resolved in build_llm_client).
+    llm_provider: Literal["local", "azure_openai", "foundry"] = "local"
+
+    # --- Organizational graph (Work IQ seam) ---
+    # local  -> derive reporting/expertise from the synthetic dataset (default)
+    # workiq -> Microsoft Work IQ (scaffold; connect a tenant to enable)
+    org_graph: Literal["local", "workiq"] = "local"
+
     # --- Data + output locations ---
     # Default to the synthetic dataset checked into the repository root.
     data_dir: Path = Field(default=REPO_DIR / "org_data")
@@ -52,16 +64,42 @@ class Settings(BaseSettings):
     world_seed: int = 1337
     auto_generate_on_startup: bool = True
 
+    # --- Game bundle generation ---
+    #: Number of quests in a new joiner's onboarding questline.
+    max_quests_per_bundle: int = 5
+
     # --- CORS (frontend dev server) ---
     cors_origins: list[str] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000"]
     )
 
-    # --- Foundry IQ (Milestone 5 — unused by Milestone 1) ---
+    # --- Foundry IQ (knowledge provider) ---
     foundry_endpoint: str | None = None
     foundry_api_key: str | None = None
     foundry_project: str | None = None
     foundry_index: str | None = None
+    #: Azure AI Foundry *project* endpoint (PROJECT_ENDPOINT) — reserved for the
+    #: Foundry Agent / knowledge-retrieval integration.
+    project_endpoint: str | None = None
+
+    # --- Azure OpenAI / Foundry (generative AI — used when LLM_PROVIDER != local) ---
+    azure_openai_endpoint: str | None = None
+    azure_openai_api_key: str | None = None
+    azure_openai_deployment: str | None = None
+    azure_openai_api_version: str = "2024-10-21"
+    # When true (and no api key), authenticate with Microsoft Entra via
+    # DefaultAzureCredential (e.g. `az login` / managed identity) — the keyless
+    # path Foundry/iq-series recommends.
+    azure_openai_use_aad: bool = False
+
+    @property
+    def effective_llm_api_key(self) -> str | None:
+        """Key for the generative model.
+
+        Falls back to ``FOUNDRY_API_KEY`` when ``AZURE_OPENAI_API_KEY`` is unset,
+        since a Foundry/Azure OpenAI resource typically shares one key.
+        """
+        return self.azure_openai_api_key or self.foundry_api_key
 
     @field_validator("data_dir", "generated_dir", mode="after")
     @classmethod
@@ -78,6 +116,11 @@ class Settings(BaseSettings):
     def npcs_file(self) -> Path:
         """Absolute path to the generated ``npcs.json`` artifact."""
         return self.generated_dir / "npcs.json"
+
+    @property
+    def bundles_dir(self) -> Path:
+        """Directory holding per-user generated game bundles."""
+        return self.generated_dir / "bundles"
 
 
 @lru_cache

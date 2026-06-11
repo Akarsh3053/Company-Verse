@@ -16,3 +16,4 @@ env/
 
 # Generated artifacts
 generated/*.json
+generated/bundles/
