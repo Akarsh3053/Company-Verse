@@ -80,47 +80,74 @@ export default function QuestLog({ bundle, onClose }: QuestLogProps) {
   };
 
   return (
-    <div className="pointer-events-auto fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col cv-panel">
-      <div className="flex items-center justify-between border-b-4 border-frame px-4 py-3">
-        <h2 className="cv-heading text-sm text-accent">Quest Log</h2>
+    /*
+     * Pokémon-style side panel:
+     * - Fixed width 300px (never full-screen)
+     * - Only as tall as needed, capped at 70 vh and anchored to the top of the
+     *   game area (below the 56 px HUD). The world remains visible to the left.
+     * - Heavy pixel border, no backdrop dim.
+     */
+    <div
+      style={{
+        top: "56px",
+        right: "8px",
+        width: "300px",
+        maxHeight: "calc(100vh - 72px)",
+        background: "rgba(11,16,32,0.97)",
+        border: "4px solid #facc15",
+        boxShadow: "0 0 0 2px #0b1020, 4px 4px 0 0 rgba(0,0,0,0.6)",
+      }}
+      className="pointer-events-auto fixed z-40 flex flex-col"
+    >
+      {/* Header */}
+      <div
+        style={{ borderBottom: "3px solid #3b4a78", background: "#141a2e" }}
+        className="flex items-center justify-between px-3 py-2"
+      >
+        <h2 className="cv-heading text-[0.65rem] text-accent">Quest Log</h2>
         <button
-          className="cv-body text-lg text-slate-300 hover:text-white"
+          className="cv-body text-base text-slate-400 hover:text-white"
           onClick={onClose}
         >
-          ✕ Close (Q)
+          ✕ (Q)
         </button>
       </div>
 
-      <div className="cv-scroll flex-1 overflow-y-auto p-4">
+      <div className="cv-scroll flex-1 overflow-y-auto p-3">
         {STATUS_ORDER.map((status) => {
           const quests = grouped[status];
           if (quests.length === 0) return null;
           return (
-            <section key={status} className="mb-5">
-              <h3 className="cv-heading mb-2 text-[0.6rem] text-slate-400">
+            <section key={status} className="mb-4">
+              <h3 className="cv-heading mb-1.5 text-[0.55rem] text-slate-500">
                 {STATUS_LABEL[status]} · {quests.length}
               </h3>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
                 {quests.map((quest) => {
                   const giver = quest.giver_npc_id
                     ? lookups?.npcById.get(quest.giver_npc_id)
                     : null;
                   const region = lookups?.regionById.get(quest.region_id);
                   const isLocked = status === "locked";
+                  const isActive = status === "active";
                   return (
                     <article
                       key={quest.id}
-                      className={`cv-panel-raised p-3 ${
-                        isLocked ? "opacity-50" : ""
-                      } ${status === "active" ? "border-accent" : ""}`}
+                      style={{
+                        background: isActive ? "rgba(250,204,21,0.08)" : "#1e2742",
+                        border: `2px solid ${isActive ? "#facc15" : "#3b4a78"}`,
+                        opacity: isLocked ? 0.55 : 1,
+                      }}
+                      className="p-2"
                     >
-                      <div className="mb-1 flex items-start justify-between gap-2">
-                        <h4 className="cv-body text-lg text-slate-100">
-                          {isLocked ? "🔒 " : ""}
+                      {/* Title row */}
+                      <div className="mb-0.5 flex items-start justify-between gap-1">
+                        <p className="cv-body flex-1 text-base leading-snug text-slate-100">
+                          {isLocked ? "🔒 " : isActive ? "▸ " : ""}
                           {quest.title}
-                        </h4>
+                        </p>
                         <span
-                          className={`cv-body text-sm uppercase ${
+                          className={`cv-body shrink-0 text-[11px] uppercase ${
                             DIFFICULTY_COLOR[quest.difficulty] ?? "text-slate-400"
                           }`}
                         >
@@ -128,55 +155,57 @@ export default function QuestLog({ bundle, onClose }: QuestLogProps) {
                         </span>
                       </div>
 
-                      <p className="cv-body mb-2 text-base text-slate-300">
-                        {quest.summary}
-                      </p>
+                      {/* Location + giver */}
+                      {(region || giver) && (
+                        <p className="cv-body mb-1 text-[11px] text-slate-500">
+                          {region?.icon} {region?.name}
+                          {giver ? ` · ${giver.name}` : ""}
+                        </p>
+                      )}
 
-                      <p className="cv-body mb-2 text-sm text-slate-500">
-                        {region ? `📍 ${region.name}` : ""}
-                        {giver ? ` · 🧙 ${giver.name}` : ""}
-                      </p>
-
-                      {!isLocked && quest.objectives.length > 0 && (
-                        <ul className="mb-2 flex flex-col gap-1">
-                          {quest.objectives.map((obj) => {
-                            const canTake =
-                              status === "active" &&
-                              (obj.type === "challenge" || obj.type === "decision") &&
-                              !!obj.challenge_id &&
-                              !objectives[obj.id];
-                            return (
-                              <ObjectiveRow
-                                key={obj.id}
-                                description={obj.description}
-                                done={!!objectives[obj.id]}
-                                onChallenge={
-                                  canTake
-                                    ? () => {
-                                        eventBus.emit("challenge:open", {
-                                          challengeId: obj.challenge_id as string,
-                                        });
-                                        onClose();
-                                      }
-                                    : undefined
-                                }
-                              />
-                            );
-                          })}
+                      {/* Objectives — active quest only, incomplete only, max 3 */}
+                      {isActive && quest.objectives.length > 0 && (
+                        <ul className="mb-1 flex flex-col gap-0.5">
+                          {quest.objectives
+                            .filter((obj) => !objectives[obj.id])
+                            .slice(0, 3)
+                            .map((obj) => {
+                              const canTake =
+                                (obj.type === "challenge" || obj.type === "decision") &&
+                                !!obj.challenge_id;
+                              return (
+                                <ObjectiveRow
+                                  key={obj.id}
+                                  description={obj.description}
+                                  done={false}
+                                  onChallenge={
+                                    canTake
+                                      ? () => {
+                                          eventBus.emit("challenge:open", {
+                                            challengeId: obj.challenge_id as string,
+                                          });
+                                          onClose();
+                                        }
+                                      : undefined
+                                  }
+                                />
+                              );
+                            })}
                         </ul>
                       )}
 
+                      {/* Reward + locate */}
                       <div className="flex items-center justify-between">
-                        <p className="cv-body text-sm text-accent">
+                        <p className="cv-body text-[11px] text-accent">
                           🏆 {quest.reward.xp} XP
                           {quest.reward.badge ? ` · ${quest.reward.badge}` : ""}
                         </p>
                         {!isLocked && (
                           <button
-                            className="cv-body text-sm text-sky-300 hover:text-white"
+                            className="cv-body text-[11px] text-sky-400 hover:text-white"
                             onClick={() => locate(quest)}
                           >
-                            📍 Locate
+                            📍 Go
                           </button>
                         )}
                       </div>

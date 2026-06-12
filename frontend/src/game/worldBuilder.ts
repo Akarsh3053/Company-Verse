@@ -19,10 +19,11 @@ import { NpcEntity } from "./entities/NpcEntity";
 import { LandmarkEntity } from "./entities/LandmarkEntity";
 import { computeWorldBounds, type WorldBounds } from "./worldGeometry";
 
-// Fixed background depths (entities use depth = y for correct overlap).
+// Depth ordering (higher = in front). Connections MUST be below region patches
+// so paths only appear between regions, not over them.
 const DEPTH_BASE = -100000;
-const DEPTH_REGION = -90000;
-const DEPTH_CONNECTION = -80000;
+const DEPTH_CONNECTION = -95000; // below regions — paths show only between region patches
+const DEPTH_REGION = -90000;    // region patches cover the connection ends
 const DEPTH_NEXUS = -70000;
 const DEPTH_REGION_LABEL = 50000;
 
@@ -45,25 +46,35 @@ export function buildWorld(scene: Phaser.Scene, bundle: GameBundle): BuiltWorld 
   const { world } = bundle;
   const bounds = computeWorldBounds(world);
 
-  // ── Base ground: a frontier sea the regions sit on. ───────────────────────
+  // ── Base ground: neutral overworld dirt—makes the whole world walkable (“country- ──
+  // side between towns”, not a void). Regions and the nexus paint on top.
   scene.add
-    .tileSprite(bounds.minX, bounds.minY, bounds.width, bounds.height, "tiles_frontier")
+    .tileSprite(bounds.minX, bounds.minY, bounds.width, bounds.height, biomeTileset("citadel"))
     .setOrigin(0, 0)
     .setDepth(DEPTH_BASE)
-    .setTint(0x3a4a3a);
+    .setAlpha(0.22);
+  scene.add
+    .rectangle(
+      bounds.minX + bounds.width / 2,
+      bounds.minY + bounds.height / 2,
+      bounds.width,
+      bounds.height,
+      0x141c0e,
+    )
+    .setDepth(DEPTH_BASE - 1);
 
-  // ── Region patches (rounded plots of biome ground, tinted by color). ───────
+  // ── Connections first so region patches cover them at their ends. ──────────
   const regionById = new Map(world.regions.map((r) => [r.id, r]));
-  for (const region of world.regions) {
-    paintRegion(scene, region);
-  }
-
-  // ── Connections (roads/bridges between region centres). ────────────────────
   for (const conn of world.connections) {
     const a = regionById.get(conn.source);
     const b = regionById.get(conn.target);
     if (!a || !b) continue; // unresolved reference → skip gracefully
     drawConnection(scene, a, b, conn.type);
+  }
+
+  // ── Region patches (drawn AFTER connections, covering path ends). ──────────
+  for (const region of world.regions) {
+    paintRegion(scene, region);
   }
 
   // ── Nexus (company HQ plaza) at the world spawn. ───────────────────────────
@@ -198,43 +209,68 @@ function drawConnection(
   type: "road" | "bridge",
 ): void {
   const g = scene.add.graphics().setDepth(DEPTH_CONNECTION);
-  const color = type === "bridge" ? 0x8b5a2b : 0xb9986a;
-  const edge = type === "bridge" ? 0x6b421f : 0x8a6a3c;
-  // Outline then fill for a path with borders.
-  g.lineStyle(26, edge, 1);
+  // Thin, clean paths. Region patches (depth DEPTH_REGION) sit on top, so the
+  // path is only visible in the open land between region circles.
+  const border = type === "bridge" ? 0x3d2008 : 0x4a3010;
+  const fill = type === "bridge" ? 0x7a5520 : 0xa07840;
+  g.lineStyle(10, border, 1);
   g.lineBetween(a.position.x, a.position.y, b.position.x, b.position.y);
-  g.lineStyle(18, color, 1);
+  g.lineStyle(6, fill, 1);
   g.lineBetween(a.position.x, a.position.y, b.position.x, b.position.y);
-  if (type === "bridge") {
-    // Plank ticks across the bridge.
-    g.lineStyle(2, edge, 1);
-    const steps = Math.max(2, Math.floor(Phaser.Math.Distance.Between(a.position.x, a.position.y, b.position.x, b.position.y) / 16));
-    for (let i = 1; i < steps; i++) {
-      const t = i / steps;
-      const mx = Phaser.Math.Linear(a.position.x, b.position.x, t);
-      const my = Phaser.Math.Linear(a.position.y, b.position.y, t);
-      const ang = Phaser.Math.Angle.Between(a.position.x, a.position.y, b.position.x, b.position.y) + Math.PI / 2;
-      g.lineBetween(mx - Math.cos(ang) * 9, my - Math.sin(ang) * 9, mx + Math.cos(ang) * 9, my + Math.sin(ang) * 9);
-    }
-  }
 }
 
 function drawNexus(scene: Phaser.Scene, x: number, y: number, company: string): void {
-  const size = TILE_SIZE * 5;
+  // 460px radius covers all diagonal gaps between the 8 ring regions.
+  const HUB_R = 460;
+  const g = scene.add.graphics().setDepth(DEPTH_NEXUS);
+
+  // Outer glow.
+  g.fillStyle(0xd4a826, 0.06);
+  g.fillCircle(x, y, HUB_R + 32);
+
+  // Stone plaza.
+  g.fillStyle(0x7a7060, 1);
+  g.fillCircle(x, y, HUB_R);
+
+  // Cobblestone grid.
+  g.lineStyle(1, 0x5a5048, 0.5);
+  const GRID = 40;
+  for (let gx = x - HUB_R; gx <= x + HUB_R; gx += GRID) {
+    const dy = Math.sqrt(Math.max(0, HUB_R * HUB_R - (gx - x) * (gx - x)));
+    g.lineBetween(gx, y - dy, gx, y + dy);
+  }
+  for (let gy = y - HUB_R; gy <= y + HUB_R; gy += GRID) {
+    const dx = Math.sqrt(Math.max(0, HUB_R * HUB_R - (gy - y) * (gy - y)));
+    g.lineBetween(x - dx, gy, x + dx, gy);
+  }
+
+  // Gold border.
+  g.lineStyle(5, 0xd4a826, 0.85);
+  g.strokeCircle(x, y, HUB_R);
+
+  // Company name.
   scene.add
-    .tileSprite(x, y, size, size, "tile_nexus")
-    .setDepth(DEPTH_NEXUS);
-  scene.add
-    .text(x, y - size / 2 - 6, `★ ${company} HQ`, {
+    .text(x, y - 14, company, {
       fontFamily: "monospace",
-      fontSize: "16px",
+      fontSize: "17px",
       color: "#facc15",
+      align: "center",
+      stroke: "#0b1020",
+      strokeThickness: 5,
+    })
+    .setOrigin(0.5, 0.5)
+    .setDepth(DEPTH_NEXUS + 1);
+  scene.add
+    .text(x, y + 10, "HQ \u2605", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#fde68a",
       align: "center",
       stroke: "#0b1020",
       strokeThickness: 4,
     })
-    .setOrigin(0.5, 1)
-    .setDepth(DEPTH_REGION_LABEL);
+    .setOrigin(0.5, 0.5)
+    .setDepth(DEPTH_NEXUS + 1);
 }
 
 /** Place an NPC on a ring inside its region, spread evenly to avoid overlap. */

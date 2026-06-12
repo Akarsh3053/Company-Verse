@@ -15,7 +15,11 @@ import { NpcEntity } from "../entities/NpcEntity";
 import { LandmarkEntity } from "../entities/LandmarkEntity";
 import { buildWorld, type BuiltWorld } from "../worldBuilder";
 
-const INTERACT_RADIUS = 64;
+// 96 pixels past the region patch radius keeps the player inside the visual patch.
+const INTERACT_RADIUS = 96;
+// Safe zone radii — player is blocked from leaving.
+const REGION_SAFE_RADIUS = 310; // just past the 288px region visual radius
+const NEXUS_SAFE_RADIUS = 460;  // covers all 8 diagonal gaps between regions
 
 export class OverworldScene extends Phaser.Scene {
   private bundle!: GameBundle;
@@ -39,8 +43,9 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    this.cameras.main.setBackgroundColor("#0b1020");
+    this.cameras.main.setBackgroundColor("#141c11");
     this.world = buildWorld(this, this.bundle);
+    this.buildSafeZones();
 
     // World + camera bounds derived from data (never assume fixed size).
     const b = this.world.bounds;
@@ -52,7 +57,14 @@ export class OverworldScene extends Phaser.Scene {
     const tint = parseTint(this.bundle.player.avatar_color);
     this.player = new Player(this, spawn.x, spawn.y, tint);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(1.4);
+    this.cameras.main.setZoom(1.0);
+
+    // Inset the camera viewport below the HUD bar so the player
+    // character never renders behind the top React overlay.
+    // Compact HUD is ~52px tall; 56px gives a small breathing margin.
+    const HUD_H = 56;
+    const { width, height } = this.scale;
+    this.cameras.main.setViewport(0, HUD_H, width, height - HUD_H);
 
     this.interactKey = this.input.keyboard!.addKey(
       Phaser.Input.Keyboard.KeyCodes.E,
@@ -110,6 +122,23 @@ export class OverworldScene extends Phaser.Scene {
     }
   }
 
+  private spawnPos!: { x: number; y: number };
+  private worldRegions!: Array<{ x: number; y: number; r: number }>;
+
+  /** Pre-compute the set of "safe" circles (regions + nexus) once. */
+  private buildSafeZones(): void {
+    const regions = this.bundle.world.regions.map((r) => ({
+      x: r.position.x,
+      y: r.position.y,
+      r: REGION_SAFE_RADIUS,
+    }));
+    // Nexus circle = area around the world spawn.
+    const sp = this.bundle.world.spawn;
+    regions.push({ x: sp.x, y: sp.y, r: NEXUS_SAFE_RADIUS });
+    this.worldRegions = regions;
+    this.spawnPos = { x: sp.x, y: sp.y };
+  }
+
   update(time: number, delta: number): void {
     if (!this.player) return;
 
@@ -118,10 +147,44 @@ export class OverworldScene extends Phaser.Scene {
     } else {
       this.player.update(time, delta);
       this.detectRegion();
+      this.softBoundary();
     }
 
     this.detectProximity(time);
     this.handleInteraction();
+  }
+
+  /**
+   * Hard boundary — the player CANNOT leave the union of region circles and the
+   * nexus hub. When outside every safe zone, we fully override their velocity
+   * to point toward the nearest safe centre at walk speed. This is physically
+   * impossible to overpower, unlike a soft push that can be fought with WASD.
+   */
+  private softBoundary(): void {
+    const px = this.player.x;
+    const py = this.player.y;
+    let nearest = this.spawnPos;
+    let nearestDist = Phaser.Math.Distance.Between(px, py, this.spawnPos.x, this.spawnPos.y);
+
+    let inSafeZone = nearestDist <= NEXUS_SAFE_RADIUS;
+    for (const zone of this.worldRegions) {
+      const d = Phaser.Math.Distance.Between(px, py, zone.x, zone.y);
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearest = zone;
+      }
+      if (d <= zone.r) inSafeZone = true;
+    }
+
+    if (!inSafeZone) {
+      // Fully override velocity — no blending, no fighting it with WASD.
+      const angle = Phaser.Math.Angle.Between(px, py, nearest.x, nearest.y);
+      const SPEED = 200;
+      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(
+        Math.cos(angle) * SPEED,
+        Math.sin(angle) * SPEED,
+      );
+    }
   }
 
   private detectRegion(): void {

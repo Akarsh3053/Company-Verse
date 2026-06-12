@@ -13,7 +13,7 @@ export function createGame(parent: HTMLElement, bundle: GameBundle): Phaser.Game
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    backgroundColor: "#0b1020",
+    backgroundColor: "#141c11",
     pixelArt: true,
     roundPixels: true,
     scale: {

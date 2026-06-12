@@ -21,6 +21,7 @@ import CompletionScreen from "@/components/CompletionScreen";
 import InteractionPrompt from "@/components/InteractionPrompt";
 import MobileControls from "@/components/MobileControls";
 import Toaster from "@/components/Toaster";
+import QuestTracker from "@/components/QuestTracker";
 
 // Phaser must never run on the server.
 const PhaserGame = dynamic(() => import("@/game/PhaserGame"), {
@@ -227,6 +228,7 @@ function PlayInner() {
         onToggleCharacter={() => setCharacterOpen((v) => !v)}
       />
       <InteractionPrompt />
+      <QuestTracker bundle={bundle} />
       <Toaster />
       <MobileControls />
 

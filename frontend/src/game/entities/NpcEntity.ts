@@ -35,11 +35,11 @@ export class NpcEntity {
       .image(x, y, textureKey)
       .setOrigin(0.5, 0.85)
       .setDepth(y);
-    if (prefix) this.sprite.setScale(1.2);
+    if (prefix) this.sprite.setScale(1.6);
 
     // Quest indicator above the head (hidden until set).
     this.indicator = scene.add
-      .text(x, y - 46, "", { fontFamily: "monospace", fontSize: "18px" })
+      .text(x, y - 58, "", { fontFamily: "monospace", fontSize: "26px" })
       .setOrigin(0.5, 1)
       .setDepth(y + 1)
       .setVisible(false);
