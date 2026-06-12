@@ -13,6 +13,7 @@ import { virtualAction } from "../virtualInput";
 import { Player } from "../entities/Player";
 import { NpcEntity } from "../entities/NpcEntity";
 import { LandmarkEntity } from "../entities/LandmarkEntity";
+import { ChallengePickup } from "../entities/ChallengePickup";
 import { buildWorld, type BuiltWorld } from "../worldBuilder";
 
 // 96 pixels past the region patch radius keeps the player inside the visual patch.
@@ -28,6 +29,8 @@ export class OverworldScene extends Phaser.Scene {
   private interactKey!: Phaser.Input.Keyboard.Key;
   private nearestNpc: NpcEntity | null = null;
   private nearestLandmark: LandmarkEntity | null = null;
+  private nearestPickup: ChallengePickup | null = null;
+  private challengePickups: ChallengePickup[] = [];
   private currentRegionId: string | null = null;
   private inputLocked = false;
   private unsubscribers: Array<() => void> = [];
@@ -71,6 +74,7 @@ export class OverworldScene extends Phaser.Scene {
     );
 
     this.refreshIndicators();
+    this.refreshPickups();
     this.subscribeToStore();
     this.bindEvents();
 
@@ -104,8 +108,23 @@ export class OverworldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.cleanup());
   }
 
+  private pendingRefresh = false;
+
   private subscribeToStore(): void {
-    const unsub = useGameStore.subscribe(() => this.refreshIndicators());
+    const unsub = useGameStore.subscribe(() => {
+      // Coalesce: many set() calls fire in one synchronous action (e.g. completeChallenge
+      // triggers completedChallenges → xp → level → stats → questStatus → unlocks).
+      // Schedule a single refresh in a microtask so it runs AFTER the whole batch settles.
+      if (this.pendingRefresh) return;
+      this.pendingRefresh = true;
+      Promise.resolve().then(() => {
+        this.pendingRefresh = false;
+        if (this.world) {
+          this.refreshIndicators();
+          this.refreshPickups();
+        }
+      });
+    });
     this.unsubscribers.push(unsub);
   }
 
@@ -119,6 +138,78 @@ export class OverworldScene extends Phaser.Scene {
     const indicatorOf = useGameStore.getState().giverIndicator;
     for (const npc of this.world.npcs) {
       npc.setIndicator(indicatorOf(npc.npc.id));
+    }
+  }
+
+  /**
+   * Sync in-world challenge pickups with the current game state.
+   * Pickups appear for every challenge whose parent quest is "available" or
+   * "active" and which hasn't been completed yet; they are destroyed on completion.
+   * Showing them for "available" quests lets the player discover them on the map
+   * before formally accepting — more Pokémon-like.
+   */
+  private refreshPickups(): void {
+    if (!this.bundle) return;                    // no isActive() guard — safe to call from create()
+    const { questStatus, completedChallenges } = useGameStore.getState();
+
+    // Build the set of challenge IDs that should currently have a pickup.
+    const wanted = new Set<string>();
+    for (const quest of this.bundle.quests) {
+      const s = questStatus[quest.id];
+      if (s !== "active" && s !== "available") continue;
+      for (const challengeId of quest.challenge_ids) {
+        if (!completedChallenges[challengeId]) {
+          wanted.add(challengeId);
+        }
+      }
+    }
+
+    // Destroy pickups that are no longer needed.
+    this.challengePickups = this.challengePickups.filter((p) => {
+      if (!wanted.has(p.challengeId)) {
+        if (this.nearestPickup === p) this.nearestPickup = null;
+        p.destroy();
+        return false;
+      }
+      return true;
+    });
+
+    // Create pickups for newly-needed challenges.
+    const existing = new Set(this.challengePickups.map((p) => p.challengeId));
+    const regionById = new Map(this.bundle.world.regions.map((r) => [r.id, r]));
+    const challengeById = new Map(this.bundle.challenges.map((c) => [c.id, c]));
+    const questById = new Map(this.bundle.quests.map((q) => [q.id, q]));
+
+    for (const challengeId of wanted) {
+      if (existing.has(challengeId)) continue;
+      const challenge = challengeById.get(challengeId);
+      if (!challenge) continue;
+      const quest = questById.get(challenge.quest_id);
+      if (!quest) continue;
+      const region = regionById.get(quest.region_id);
+      if (!region) continue;
+
+      // Spread multiple pickups in a small ring around the region centre.
+      const sameQuest = [...wanted].filter((cid) => {
+        const c = challengeById.get(cid);
+        return c && c.quest_id === challenge.quest_id;
+      });
+      const idx = sameQuest.indexOf(challengeId);
+      const total = sameQuest.length;
+      const r = total > 1 ? 90 : 0;
+      const angle = total > 1 ? (idx / total) * Math.PI * 2 : 0;
+      const px = region.position.x + Math.cos(angle) * r;
+      const py = region.position.y + Math.sin(angle) * r + 60; // offset below centre
+
+      const pickup = new ChallengePickup(
+        this,
+        challengeId,
+        challenge.quest_id,
+        px,
+        py,
+        challenge.title,
+      );
+      this.challengePickups.push(pickup);
     }
   }
 
@@ -203,36 +294,34 @@ export class OverworldScene extends Phaser.Scene {
     for (const candidate of this.world.npcs) {
       candidate.pulse(time);
       const d = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        candidate.x,
-        candidate.y,
+        this.player.x, this.player.y, candidate.x, candidate.y,
       );
-      if (d < npcDist) {
-        npcDist = d;
-        npc = candidate;
-      }
+      if (d < npcDist) { npcDist = d; npc = candidate; }
     }
 
     let landmark: LandmarkEntity | null = null;
     let lmDist = INTERACT_RADIUS;
     for (const candidate of this.world.landmarks) {
       const d = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        candidate.x,
-        candidate.y,
+        this.player.x, this.player.y, candidate.x, candidate.y,
       );
-      if (d < lmDist) {
-        lmDist = d;
-        landmark = candidate;
-      }
+      if (d < lmDist) { lmDist = d; landmark = candidate; }
     }
 
-    // Highlight only the single nearest interactable.
-    const npcWins = npc && (!landmark || npcDist <= lmDist);
-    const targetNpc = npcWins ? npc : null;
-    const targetLandmark = !npcWins ? landmark : null;
+    let pickup: ChallengePickup | null = null;
+    let pickupDist = INTERACT_RADIUS;
+    for (const candidate of this.challengePickups) {
+      const d = Phaser.Math.Distance.Between(
+        this.player.x, this.player.y, candidate.x, candidate.y,
+      );
+      if (d < pickupDist) { pickupDist = d; pickup = candidate; }
+    }
+
+    // Pickup wins over landmark if closer; NPC wins over everything if closest.
+    const bestDist = Math.min(npcDist, lmDist, pickupDist);
+    const targetNpc = npcDist === bestDist && npc ? npc : null;
+    const targetPickup = !targetNpc && pickupDist === bestDist && pickup ? pickup : null;
+    const targetLandmark = !targetNpc && !targetPickup && lmDist === bestDist && landmark ? landmark : null;
 
     if (targetNpc !== this.nearestNpc) {
       this.nearestNpc?.setNearby(false);
@@ -244,12 +333,19 @@ export class OverworldScene extends Phaser.Scene {
       targetLandmark?.setNearby(true);
       this.nearestLandmark = targetLandmark;
     }
+    if (targetPickup !== this.nearestPickup) {
+      this.nearestPickup?.setNearby(false);
+      targetPickup?.setNearby(true);
+      this.nearestPickup = targetPickup;
+    }
 
     const label = targetNpc
       ? `Talk to ${targetNpc.npc.name}`
-      : targetLandmark
-        ? `Inspect ${targetLandmark.landmark.name}`
-        : null;
+      : targetPickup
+        ? `Take Challenge`
+        : targetLandmark
+          ? `Inspect ${targetLandmark.landmark.name}`
+          : null;
     eventBus.emit("interaction:prompt", { label: this.inputLocked ? null : label });
   }
 
@@ -261,9 +357,16 @@ export class OverworldScene extends Phaser.Scene {
 
     if (this.nearestNpc) {
       const npcId = this.nearestNpc.npc.id;
-      // Reaching an NPC and opening dialogue satisfies a 'talk' objective.
       useGameStore.getState().recordTalk(npcId);
       eventBus.emit("dialogue:open", { npcId });
+    } else if (this.nearestPickup) {
+      const { questStatus, acceptQuest } = useGameStore.getState();
+      // Auto-accept the quest if it's still in 'available' state so the player
+      // doesn't have to find the NPC giver before taking the in-world challenge.
+      if (questStatus[this.nearestPickup.questId] === "available") {
+        acceptQuest(this.nearestPickup.questId);
+      }
+      eventBus.emit("challenge:open", { challengeId: this.nearestPickup.challengeId });
     } else if (this.nearestLandmark) {
       eventBus.emit("landmark:open", {
         landmark: this.nearestLandmark.landmark,

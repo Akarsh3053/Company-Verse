@@ -183,11 +183,14 @@ export const useGameStore = create<GameState>((set, get) => {
         (k) => s.completedChallenges[k],
       ),
     };
-    try {
-      window.localStorage.setItem(progressKey(data.userKey), JSON.stringify(data));
-    } catch {
-      /* storage full / unavailable — non-fatal */
-    }
+    // Defer the write so it never blocks the game loop or React render mid-update.
+    window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(progressKey(data.userKey), JSON.stringify(data));
+      } catch {
+        /* storage full / unavailable — non-fatal */
+      }
+    }, 0);
   }
 
   function pushToast(toast: Omit<Toast, "id">) {

@@ -27,6 +27,18 @@ export default function LandmarkCard({
     recordReadLandmark(landmark.id);
   }, [landmark.id, recordExploreLandmark, recordReadLandmark]);
 
+  // Enter / Space closes the card (same as clicking Continue).
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   const status = landmark.metadata?.status;
 
   return (
@@ -88,7 +100,7 @@ export default function LandmarkCard({
         </p>
 
         <button className="cv-btn cv-btn-primary mt-4 w-full" onClick={onClose}>
-          Continue ▶
+          Continue ▸  <span className="ml-2 opacity-40">[Enter]</span>
         </button>
       </div>
     </div>

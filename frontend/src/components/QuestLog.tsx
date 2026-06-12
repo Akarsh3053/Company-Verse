@@ -28,11 +28,9 @@ const STATUS_LABEL: Record<QuestStatus, string> = {
 function ObjectiveRow({
   description,
   done,
-  onChallenge,
 }: {
   description: string;
   done: boolean;
-  onChallenge?: () => void;
 }) {
   return (
     <li className="cv-body flex items-start gap-2 text-base">
@@ -42,14 +40,6 @@ function ObjectiveRow({
       <span className={done ? "text-slate-400 line-through" : "text-slate-200"}>
         {description}
       </span>
-      {!done && onChallenge && (
-        <button
-          className="cv-body ml-auto whitespace-nowrap text-sm text-accent hover:text-white"
-          onClick={onChallenge}
-        >
-          ▶ Take
-        </button>
-      )}
     </li>
   );
 }
@@ -169,28 +159,13 @@ export default function QuestLog({ bundle, onClose }: QuestLogProps) {
                           {quest.objectives
                             .filter((obj) => !objectives[obj.id])
                             .slice(0, 3)
-                            .map((obj) => {
-                              const canTake =
-                                (obj.type === "challenge" || obj.type === "decision") &&
-                                !!obj.challenge_id;
-                              return (
-                                <ObjectiveRow
-                                  key={obj.id}
-                                  description={obj.description}
-                                  done={false}
-                                  onChallenge={
-                                    canTake
-                                      ? () => {
-                                          eventBus.emit("challenge:open", {
-                                            challengeId: obj.challenge_id as string,
-                                          });
-                                          onClose();
-                                        }
-                                      : undefined
-                                  }
-                                />
-                              );
-                            })}
+                            .map((obj) => (
+                              <ObjectiveRow
+                                key={obj.id}
+                                description={obj.description}
+                                done={false}
+                              />
+                            ))}
                         </ul>
                       )}
 

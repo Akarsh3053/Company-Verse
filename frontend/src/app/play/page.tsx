@@ -11,7 +11,6 @@ import { eventBus } from "@/game/eventBus";
 
 import IntroCutscene from "@/components/IntroCutscene";
 import Hud from "@/components/Hud";
-import QuestLog from "@/components/QuestLog";
 import DialogueBox from "@/components/DialogueBox";
 import ChallengeModal from "@/components/ChallengeModal";
 import ChatPanel from "@/components/ChatPanel";
@@ -64,7 +63,6 @@ function PlayInner() {
   const initialisedFor = useRef<string | null>(null);
 
   // Overlay state.
-  const [questLogOpen, setQuestLogOpen] = useState(false);
   const [characterOpen, setCharacterOpen] = useState(false);
   const [dialogueNpc, setDialogueNpc] = useState<string | null>(null);
   const [challengeId, setChallengeId] = useState<string | null>(null);
@@ -138,7 +136,6 @@ function PlayInner() {
 
   // ── Lock Phaser input whenever an overlay is open. ─────────────────────────
   const anyOverlayOpen =
-    questLogOpen ||
     characterOpen ||
     !!dialogueNpc ||
     !!challengeId ||
@@ -157,8 +154,7 @@ function PlayInner() {
     if (landmark) return setLandmark(null);
     if (dialogueNpc) return setDialogueNpc(null);
     if (characterOpen) return setCharacterOpen(false);
-    if (questLogOpen) return setQuestLogOpen(false);
-  }, [chatNpc, challengeId, landmark, dialogueNpc, characterOpen, questLogOpen]);
+  }, [chatNpc, challengeId, landmark, dialogueNpc, characterOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -172,10 +168,7 @@ function PlayInner() {
         return;
       }
       if (typing) return;
-      if (e.key === "q" || e.key === "Q") {
-        e.preventDefault();
-        setQuestLogOpen((v) => !v);
-      } else if (e.key === "c" || e.key === "C") {
+      if (e.key === "c" || e.key === "C") {
         e.preventDefault();
         setCharacterOpen((v) => !v);
       }
@@ -223,8 +216,6 @@ function PlayInner() {
       {/* React HUD overlays */}
       <Hud
         bundle={bundle}
-        questLogOpen={questLogOpen}
-        onToggleQuests={() => setQuestLogOpen((v) => !v)}
         onToggleCharacter={() => setCharacterOpen((v) => !v)}
       />
       <InteractionPrompt />
@@ -232,9 +223,6 @@ function PlayInner() {
       <Toaster />
       <MobileControls />
 
-      {questLogOpen && (
-        <QuestLog bundle={bundle} onClose={() => setQuestLogOpen(false)} />
-      )}
       {characterOpen && (
         <CharacterSheet bundle={bundle} onClose={() => setCharacterOpen(false)} />
       )}

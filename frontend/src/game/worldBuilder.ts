@@ -46,22 +46,25 @@ export function buildWorld(scene: Phaser.Scene, bundle: GameBundle): BuiltWorld 
   const { world } = bundle;
   const bounds = computeWorldBounds(world);
 
-  // ── Base ground: neutral overworld dirt—makes the whole world walkable (“country- ──
-  // side between towns”, not a void). Regions and the nexus paint on top.
-  scene.add
-    .tileSprite(bounds.minX, bounds.minY, bounds.width, bounds.height, biomeTileset("citadel"))
-    .setOrigin(0, 0)
-    .setDepth(DEPTH_BASE)
-    .setAlpha(0.22);
+  // ── Base ground: a warm earthy overworld that makes the whole map feel like ──
+  // countryside between towns, not a dark void. Regions and the nexus sit on top.
+  // Layer 1: solid warm earth base colour.
   scene.add
     .rectangle(
       bounds.minX + bounds.width / 2,
       bounds.minY + bounds.height / 2,
       bounds.width,
       bounds.height,
-      0x141c0e,
+      0x3d3520,          // warm dark-earth brown
     )
     .setDepth(DEPTH_BASE - 1);
+  // Layer 2: dirt tile overlay for texture, visible alpha.
+  scene.add
+    .tileSprite(bounds.minX, bounds.minY, bounds.width, bounds.height, biomeTileset("citadel"))
+    .setOrigin(0, 0)
+    .setDepth(DEPTH_BASE)
+    .setAlpha(0.55)      // enough to read the texture
+    .setTint(0x6b5a2a); // warm earthy tint
 
   // ── Connections first so region patches cover them at their ends. ──────────
   const regionById = new Map(world.regions.map((r) => [r.id, r]));

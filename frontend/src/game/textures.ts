@@ -331,6 +331,36 @@ function makeMisc(scene: Phaser.Scene) {
     g.fillStyle(0xffffff, 1);
     g.fillCircle(3, 3, 3);
   });
+  // Challenge pickup — a glowing amber scroll/star (40×40).
+  // Two frames: one slightly brighter for a pulse animation.
+  const W = 40;
+  const CX = W / 2;
+  const drawPickup = (g: Phaser.GameObjects.Graphics, bright: boolean) => {
+    const glow = bright ? 0.28 : 0.14;
+    // Outer glow halo.
+    g.fillStyle(0xf59e0b, glow);
+    g.fillCircle(CX, CX, 19);
+    // Inner halo.
+    g.fillStyle(0xfbbf24, bright ? 0.45 : 0.3);
+    g.fillCircle(CX, CX, 14);
+    // Core circle.
+    g.fillStyle(bright ? 0xfde68a : 0xfbbf24, 1);
+    g.fillCircle(CX, CX, 8);
+    // 6-pointed star lines.
+    g.lineStyle(bright ? 3 : 2, bright ? 0xffffff : 0xfde68a, 1);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      g.lineBetween(
+        CX + Math.cos(a) * 5, CX + Math.sin(a) * 5,
+        CX + Math.cos(a) * 13, CX + Math.sin(a) * 13,
+      );
+    }
+    // Centre dot.
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(CX, CX, 3);
+  };
+  bake(scene, "pickup_challenge_a", W, W, (g) => drawPickup(g, false));
+  bake(scene, "pickup_challenge_b", W, W, (g) => drawPickup(g, true));
 }
 
 // ── Public entry point ───────────────────────────────────────────────────────
