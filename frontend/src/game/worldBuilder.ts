@@ -14,6 +14,7 @@ import {
   biomePalette,
   biomeTileset,
 } from "./assetMap";
+import { BIOME_PROPS } from "./assets/manifest";
 import { NpcEntity } from "./entities/NpcEntity";
 import { LandmarkEntity } from "./entities/LandmarkEntity";
 import { computeWorldBounds, type WorldBounds } from "./worldGeometry";
@@ -122,30 +123,27 @@ function paintRegion(scene: Phaser.Scene, region: Region): void {
   border.fillStyle(Phaser.Display.Color.IntegerToColor(tint).darken(40).color, 1);
   border.fillRoundedRect(x - REGION_RADIUS - 6, y - REGION_RADIUS - 6, size + 12, size + 12, 26);
 
-  // Biome ground, masked to a rounded rect, tinted toward region.color.
-  const ground = scene.add
-    .tileSprite(x, y, size, size, biomeTileset(region.biome))
-    .setDepth(DEPTH_REGION)
-    .setTint(tint);
-  ground.setAlpha(0.96);
-
+  // Shared rounded-rect mask for the ground + colour overlay.
   const maskShape = scene.make.graphics({}, false);
   maskShape.fillStyle(0xffffff);
   maskShape.fillRoundedRect(x - REGION_RADIUS, y - REGION_RADIUS, size, size, 22);
-  ground.setMask(maskShape.createGeometryMask());
+  const mask = maskShape.createGeometryMask();
 
-  // Decorative props (palette colour) scattered within the plot.
-  const palette = biomePalette(region.biome);
-  const rand = mulberry(region.id);
-  const props = scene.add.graphics().setDepth(DEPTH_REGION + 1);
-  for (let i = 0; i < 10; i++) {
-    const angle = rand() * Math.PI * 2;
-    const dist = rand() * (REGION_RADIUS - 40);
-    const px = x + Math.cos(angle) * dist;
-    const py = y + Math.sin(angle) * dist;
-    props.fillStyle(palette.prop, 0.85);
-    props.fillCircle(px, py, 3 + rand() * 3);
-  }
+  // Biome ground at its NATURAL colour (real terrain tiles or procedural).
+  const ground = scene.add
+    .tileSprite(x, y, size, size, biomeTileset(region.biome))
+    .setDepth(DEPTH_REGION);
+  ground.setMask(mask);
+
+  // Subtle region-colour wash for identity (keeps terrain readable, unlike a
+  // full multiply tint which muddies real art).
+  const overlay = scene.add
+    .rectangle(x, y, size, size, tint, 0.16)
+    .setDepth(DEPTH_REGION + 1);
+  overlay.setMask(mask);
+
+  // Decorative props scattered in an outer ring (avoid the central NPC ring).
+  placeRegionProps(scene, region, x, y);
 
   // Region label (icon + name) near the top of the plot.
   const label = scene.add
@@ -160,6 +158,37 @@ function paintRegion(scene: Phaser.Scene, region: Region): void {
     .setOrigin(0.5, 0.5)
     .setDepth(DEPTH_REGION_LABEL);
   label.setShadow(0, 2, "#000000", 3, true, true);
+}
+
+/** Scatter biome-appropriate prop sprites (real art, scaled), or dots if missing. */
+function placeRegionProps(
+  scene: Phaser.Scene,
+  region: Region,
+  x: number,
+  y: number,
+): void {
+  const specs = BIOME_PROPS[region.biome] ?? BIOME_PROPS.frontier ?? [];
+  const rand = mulberry(region.id);
+  const count = 8;
+  for (let i = 0; i < count; i++) {
+    const angle = rand() * Math.PI * 2;
+    const dist = REGION_RADIUS * (0.6 + rand() * 0.34);
+    const px = x + Math.cos(angle) * dist;
+    const py = y + Math.sin(angle) * dist;
+
+    const spec = specs.length ? specs[Math.floor(rand() * specs.length)] : null;
+    if (spec && scene.textures.exists(spec.key)) {
+      const img = scene.add.image(px, py, spec.key).setOrigin(0.5, 0.96).setDepth(py);
+      const src = scene.textures.get(spec.key).getSourceImage() as { height: number };
+      const scale = spec.height / (src.height || spec.height);
+      img.setScale(scale);
+    } else {
+      // Procedural fallback: a small palette-coloured dot.
+      const g = scene.add.graphics().setDepth(DEPTH_REGION + 2);
+      g.fillStyle(biomePalette(region.biome).prop, 0.85);
+      g.fillCircle(px, py, 3 + rand() * 3);
+    }
+  }
 }
 
 function drawConnection(

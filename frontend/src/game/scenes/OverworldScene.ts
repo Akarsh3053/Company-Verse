@@ -27,7 +27,6 @@ export class OverworldScene extends Phaser.Scene {
   private currentRegionId: string | null = null;
   private inputLocked = false;
   private unsubscribers: Array<() => void> = [];
-  private lastMoveEmit = 0;
 
   constructor() {
     super("Overworld");
@@ -123,12 +122,6 @@ export class OverworldScene extends Phaser.Scene {
 
     this.detectProximity(time);
     this.handleInteraction();
-
-    // Throttled position broadcast for the React minimap.
-    if (time - this.lastMoveEmit > 120) {
-      this.lastMoveEmit = time;
-      eventBus.emit("player:moved", { x: this.player.x, y: this.player.y });
-    }
   }
 
   private detectRegion(): void {

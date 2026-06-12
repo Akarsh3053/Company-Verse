@@ -26,6 +26,13 @@ export function createGame(parent: HTMLElement, bundle: GameBundle): Phaser.Game
       default: "arcade",
       arcade: { debug: false },
     },
+    // Load our finite asset set (~110 small files) in a single parallel batch.
+    // Phaser pauses its loop when the tab is hidden, which can stall the loader's
+    // incremental pump; a batch large enough to cover every queued file avoids
+    // depending on that pump so boot always completes.
+    loader: {
+      maxParallelDownloads: 256,
+    },
     scene: [BootScene, OverworldScene],
   });
 

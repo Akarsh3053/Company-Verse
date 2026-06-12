@@ -139,13 +139,17 @@ src/
 
 ## Assets / licenses
 
-CompanyVerse ships **no binary art** — every tile, landmark, and character
-texture is **generated procedurally at runtime** (`src/game/textures.ts`), keyed
-by the enums in `src/game/assetMap.ts`. This is the "finite, combinatorial asset
-library": a fixed set of generated textures recombined per bundle. To swap in a
-real CC0 pack later (Kenney.nl, LPC, …), load images under the same asset keys —
-see [`public/assets/CREDITS.md`](public/assets/CREDITS.md). Fonts: *Press Start
-2P* and *VT323* (SIL OFL) via Google Fonts.
+CompanyVerse renders from a small, **finite asset library** recombined per bundle
+(the "finite, combinatorial" approach), with a **procedural fallback** baked at
+runtime (`src/game/textures.ts`) so any value the backend emits always renders.
+Enum → asset mapping lives in `src/game/assetMap.ts` + `src/game/assets/manifest.ts`.
+
+Real art in use (trimmed to only what's referenced):
+- **Terrain, props, nexus & landmark materials** — Cam Tatz "Top Down Asset Pack 1" (CC0).
+- **Characters** (player + 9 NPC roles) — Philipp Lenssen "700+ RPG Sprites" (CC-BY 3.0).
+
+Full attributions: [`public/assets/CREDITS.md`](public/assets/CREDITS.md). Fonts:
+*Press Start 2P* and *VT323* (SIL OFL) via Google Fonts.
 
 ---
 

@@ -19,7 +19,6 @@ import LandmarkCard from "@/components/LandmarkCard";
 import CharacterSheet from "@/components/CharacterSheet";
 import CompletionScreen from "@/components/CompletionScreen";
 import InteractionPrompt from "@/components/InteractionPrompt";
-import Minimap from "@/components/Minimap";
 import MobileControls from "@/components/MobileControls";
 import Toaster from "@/components/Toaster";
 
@@ -227,7 +226,6 @@ function PlayInner() {
         onToggleQuests={() => setQuestLogOpen((v) => !v)}
         onToggleCharacter={() => setCharacterOpen((v) => !v)}
       />
-      <Minimap bundle={bundle} />
       <InteractionPrompt />
       <Toaster />
       <MobileControls />

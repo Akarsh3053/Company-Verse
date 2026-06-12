@@ -7,6 +7,8 @@
 import * as Phaser from "phaser";
 import type { NPC } from "@/types/bundle";
 import { npcSprite } from "../assetMap";
+import { resolveCharPrefix } from "../assets/realAssets";
+import { charFrameKey } from "../assets/manifest";
 
 const INDICATOR_GLYPH: Record<string, string> = {
   available: "❗",
@@ -23,10 +25,17 @@ export class NpcEntity {
   constructor(scene: Phaser.Scene, npc: NPC, x: number, y: number) {
     this.npc = npc;
 
+    // Prefer real character art (front-facing idle frame); else procedural.
+    const prefix = resolveCharPrefix(scene, npc.sprite_type);
+    const textureKey = prefix
+      ? charFrameKey(prefix, "fr", 1)
+      : npcSprite(npc.sprite_type);
+
     this.sprite = scene.add
-      .image(x, y, npcSprite(npc.sprite_type))
+      .image(x, y, textureKey)
       .setOrigin(0.5, 0.85)
       .setDepth(y);
+    if (prefix) this.sprite.setScale(1.2);
 
     // Quest indicator above the head (hidden until set).
     this.indicator = scene.add

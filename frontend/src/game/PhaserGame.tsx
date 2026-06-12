@@ -21,13 +21,25 @@ export default function PhaserGame({ bundle }: PhaserGameProps) {
   const gameRef = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
-    if (!hostRef.current || gameRef.current) return;
-    const game = createGame(hostRef.current, bundle);
-    gameRef.current = game;
+    let cancelled = false;
+
+    // Defer creation by a tick so React 18 StrictMode's dev-only
+    // mount→unmount→mount cycle settles into a SINGLE game instance. Without
+    // this, the first mount creates game A, the immediate cleanup destroys it
+    // asynchronously, and the second mount creates game B while A is still
+    // tearing down — the two race and can leave an orphaned, half-loaded canvas.
+    const timer = window.setTimeout(() => {
+      if (cancelled || !hostRef.current || gameRef.current) return;
+      gameRef.current = createGame(hostRef.current, bundle);
+    }, 0);
 
     return () => {
-      gameRef.current = null;
-      game.destroy(true);
+      cancelled = true;
+      window.clearTimeout(timer);
+      if (gameRef.current) {
+        gameRef.current.destroy(true);
+        gameRef.current = null;
+      }
     };
     // Bundle is fixed for the lifetime of this mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -20,7 +20,6 @@ export type GameEvents = {
   "interaction:prompt": { label: string | null };
   "npc:near": { npc: NPC | null };
   "region:entered": { regionId: string };
-  "player:moved": { x: number; y: number };
   "world:ready": Record<string, never>;
 
   // React → Phaser (drive the world from UI actions)

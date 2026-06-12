@@ -1,14 +1,34 @@
 # Asset Credits & Licenses
 
-CompanyVerse ships **no third-party binary art**. Every tile, landmark, and
-character texture is **generated procedurally at runtime** in the Phaser
-`BootScene` (see `src/game/textures.ts`) using `Phaser.GameObjects.Graphics` →
-`generateTexture()`.
+CompanyVerse renders from a **finite, combinatorial asset library** (frontend.md
+§12): a fixed set of real art packs, recombined per bundle so every generated
+world renders from the same assets. Mapping from backend enum values → asset
+keys lives in `src/game/assetMap.ts` and `src/game/assets/manifest.ts`.
 
-This follows the spec's "finite, combinatorial asset library" philosophy
-(frontend.md §12): a small, fixed set of generated textures — keyed by biome,
-landmark type, and NPC role in `src/game/assetMap.ts` — is recombined per
-bundle so every generated world renders from the same art.
+Anything a pack doesn't cover is generated procedurally at runtime
+(`src/game/textures.ts`) as an automatic fallback, so the game always renders.
+
+## Packs in use
+
+### Terrain, props, nexus & landmarks — Cam Tatz "Top Down Asset Pack 1"
+- Author: **Cam Tatz** (@CamTatz · ctatz.com)
+- License: **CC0 1.0 (Public Domain)** — no attribution required (credited here gratefully)
+- Path: `tiles/tilepack/`
+- Used for: biome ground fills (grass/dirt/sand/snow/slime), trees, rocks,
+  bushes, flowers, mushrooms, cactus, the HQ nexus plaza floor, and landmark
+  building materials (brick/plaster walls + door composited into landmark sprites).
+- The pack has been trimmed to only the files the game references.
+
+### Characters — "700+ RPG Sprites" (The Last Guardian set)
+- Author: **Philipp Lenssen** (outer-court.com)
+- License: **CC-BY 3.0** — attribution required. "All images drawn by Philipp
+  Lenssen in late 1990s. Credit by name appreciated."
+- Source: https://opengameart.org/content/700-sprites
+- Paths: `characters_png/` (runtime sprites) + `charcters/last-guardian-sprites/`
+  (original GIF source, trimmed to the 10 used character prefixes).
+- Used for: the player avatar + all 9 NPC role sprites (4-direction walk cycles).
+- The runtime PNGs are the source GIFs with their opaque white background removed
+  (edge flood-fill); regenerate with `scripts/convert_chars.ps1`.
 
 ## Fonts
 
@@ -17,15 +37,13 @@ bundle so every generated world renders from the same art.
 
 Loaded via Google Fonts CSS in `src/app/globals.css`.
 
-## Swapping in hand-drawn art later
+## How the mapping works
 
-To replace the procedural textures with a real CC0 pack (e.g. Kenney.nl Tiny
-Town / Tiny Dungeon, or LPC tilesets from OpenGameArt):
+`src/game/assets/manifest.ts` declares:
+- `BIOME_TERRAIN_FILE` — biome → Cainos fill tile.
+- `BIOME_PROPS` — biome → which props to scatter.
+- `CHAR_ROLE_PREFIX` — backend `sprite_type` → Last Guardian character prefix.
 
-1. Drop the images under `public/assets/{tiles,landmarks,characters,ui}/`.
-2. Load them in `BootScene.preload()` under the **same keys** declared in
-   `src/game/assetMap.ts` (e.g. `tiles_citadel`, `lm_spire`, `char_guide`).
-3. Remove (or keep as fallback) the matching generator in `textures.ts`.
-
-Because the asset keys are the single source of truth, no other code changes
-are required. Record the new pack's attribution/license here.
+Real images load in `BootScene.preload()` under the same texture keys the
+procedural factory uses; `generateAllTextures()` then fills only the gaps. To
+swap a pack, change the file paths in the manifest — no other code changes.
