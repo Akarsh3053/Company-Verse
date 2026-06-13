@@ -153,12 +153,13 @@ export default function QuestTracker({ bundle }: QuestTrackerProps) {
 
   const toggle = () => {
     setOpen((v) => {
-      if (!v) setNeedsAttention(false); // clear blink when opening
+      if (!v) setNeedsAttention(false);
       return !v;
     });
   };
 
-  if (!tracked.quest && !tracked.allDone) return null;
+  // noQuest declared before Tab so Tab can reference it safely.
+  const noQuest = !tracked.quest && !tracked.allDone;
 
   // ── Tab (always visible) ────────────────────────────────────────────────
   const Tab = (
@@ -208,6 +209,27 @@ export default function QuestTracker({ bundle }: QuestTrackerProps) {
             }}
           >
             <p className="cv-heading text-[0.55rem] text-success">★ All quests complete!</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── No quest yet — show collapsed tab only ─────────────────────────────
+  if (noQuest) {
+    return (
+      <div className="pointer-events-none fixed bottom-0 right-4 z-30 flex flex-col items-end">
+        {Tab}
+        {open && (
+          <div
+            className="pointer-events-auto w-64 p-3 text-center"
+            style={{
+              background: "rgba(11,16,32,0.95)",
+              border: "2px solid #3b4a78",
+              borderRadius: "6px 0 6px 6px",
+            }}
+          >
+            <p className="cv-body text-base text-slate-400">Exploring… your first quest is coming.</p>
           </div>
         )}
       </div>

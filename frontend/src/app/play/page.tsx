@@ -10,6 +10,7 @@ import { useGameStore } from "@/state/gameStore";
 import { eventBus } from "@/game/eventBus";
 
 import IntroCutscene from "@/components/IntroCutscene";
+import ControlsScreen from "@/components/ControlsScreen";
 import Hud from "@/components/Hud";
 import DialogueBox from "@/components/DialogueBox";
 import ChallengeModal from "@/components/ChallengeModal";
@@ -60,6 +61,7 @@ function PlayInner() {
   const [bundle, setBundle] = useState<GameBundle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [introDone, setIntroDone] = useState(!wantIntro);
+  const [controlsDone, setControlsDone] = useState(!wantIntro); // skip on resume
   const initialisedFor = useRef<string | null>(null);
 
   // Overlay state.
@@ -83,7 +85,7 @@ function PlayInner() {
 
     if (sessionBundle && sessionBundle.metadata.user_key === key) {
       if (initialisedFor.current !== key) {
-        initFromBundle(sessionBundle);
+        initFromBundle(sessionBundle, wantIntro); // forceNew when coming from New Game
         initialisedFor.current = key;
       }
       setBundle(sessionBundle);
@@ -94,7 +96,7 @@ function PlayInner() {
       try {
         const fetched = await getBundle(key);
         if (cancelled) return;
-        initFromBundle(fetched);
+        initFromBundle(fetched, wantIntro); // forceNew when intro=1
         initialisedFor.current = key;
         setBundle(fetched);
       } catch (err) {
@@ -206,6 +208,10 @@ function PlayInner() {
 
   if (!introDone) {
     return <IntroCutscene bundle={bundle} onBegin={() => setIntroDone(true)} />;
+  }
+
+  if (!controlsDone) {
+    return <ControlsScreen onDismiss={() => setControlsDone(true)} />;
   }
 
   return (

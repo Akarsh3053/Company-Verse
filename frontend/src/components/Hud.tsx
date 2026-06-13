@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGameStore, xpToNext } from "@/state/gameStore";
 import type { GameBundle } from "@/types/bundle";
 
@@ -34,6 +34,25 @@ export default function Hud({ bundle, onToggleCharacter }: HudProps) {
 
   const [questOpen, setQuestOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
+
+  // J key toggles the quest dropdown.
+  // (Q is reserved for the bottom-right QuestTracker drawer.)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const el = document.activeElement;
+      if (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el instanceof HTMLSelectElement
+      ) return;
+      if (e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        setQuestOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const need = xpToNext(level);
   const xpPct = Math.round((xpIntoLevel / need) * 100);
@@ -113,9 +132,9 @@ export default function Hud({ bundle, onToggleCharacter }: HudProps) {
               }}
               className="cv-heading px-2.5 py-1 text-[0.55rem]"
               onClick={() => setQuestOpen((v) => !v)}
-              title="Quest History"
+              title="Quest History (J)"
             >
-              QUESTS {doneQuests}/{totalQuests} {questOpen ? "▲" : "▼"}
+              QUESTS {doneQuests}/{totalQuests} {questOpen ? "▲" : "▼"} <span style={{opacity:0.55}}>(J)</span>
             </button>
           </div>
 
@@ -123,9 +142,9 @@ export default function Hud({ bundle, onToggleCharacter }: HudProps) {
             style={{ background: "#1e2742", border: "2px solid #3b4a78", color: "#e5e7eb" }}
             className="cv-heading px-2.5 py-1 text-[0.55rem]"
             onClick={onToggleCharacter}
-            title="Hero (C)"
+            title="Hero sheet (C)"
           >
-            HERO
+            HERO <span style={{ opacity: 0.55 }}>(C)</span>
           </button>
         </div>
       </div>

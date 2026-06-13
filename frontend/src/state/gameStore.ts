@@ -83,7 +83,7 @@ interface GameState {
   toasts: Toast[];
 
   // ── actions ──────────────────────────────────────────────────────────────
-  initFromBundle: (bundle: GameBundle) => void;
+  initFromBundle: (bundle: GameBundle, forceNew?: boolean) => void;
   acceptQuest: (questId: string) => void;
   recordTalk: (npcId: string) => void;
   recordExploreRegion: (regionId: string) => void;
@@ -314,9 +314,18 @@ export const useGameStore = create<GameState>((set, get) => {
     completedChallenges: {},
     toasts: [],
 
-    initFromBundle: (bundle) => {
+  initFromBundle: (bundle, forceNew = false) => {
       const lookups = buildLookups(bundle);
-      const persisted = loadPersisted(bundle.metadata.user_key);
+
+      // forceNew=true means the user clicked "New Game" — always start fresh
+      // and wipe any saved progress for this key so it can't bleed back in.
+      if (forceNew) {
+        if (typeof window !== "undefined") {
+          try { window.localStorage.removeItem(progressKey(bundle.metadata.user_key)); } catch {}
+        }
+      }
+
+      const persisted = forceNew ? null : loadPersisted(bundle.metadata.user_key);
 
       if (persisted) {
         set({
