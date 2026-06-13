@@ -52,14 +52,42 @@ CompanyVerse/
 │   ├── company.md · employees.csv · org_chart.md
 │   ├── projects.csv · systems.csv
 │   └── docs/         20 enterprise docs (SOPs, ADRs, runbooks, policies…)
+├── start.ps1         One-command launcher (installs deps + starts both servers)
 └── README.md         ← you are here
 ```
 
 ---
 
-## Quick start (both servers, two terminals)
+## Quick start
 
-### Terminal 1 — Backend
+### One command (recommended)
+
+From the repo root in **PowerShell**:
+
+```powershell
+pwsh start.ps1
+```
+
+`start.ps1` takes care of everything automatically:
+
+1. Checks that Python and Node.js are on PATH
+2. Creates `backend/.venv` and installs Python dependencies if missing
+3. Copies `backend/.env.example` → `backend/.env` if no `.env` exists
+4. Runs `npm install` in `frontend/` if `node_modules` is missing
+5. Copies `frontend/.env.example` → `frontend/.env.local` if missing
+6. Starts the backend in a separate PowerShell window (http://127.0.0.1:8000)
+7. Starts the frontend dev server in the current window (http://localhost:3000)
+
+Open **http://localhost:3000**, click **New Game**, fill in a profile and wait ~60-90 s for generation. The demo persona **Alex Johnson · Junior Software Engineer** exercises all 9 biomes, all NPC roles, all quest types, and all 4 challenge types.
+
+> **CORS** is preconfigured for `http://localhost:3000` and `http://127.0.0.1:3000`. Always run the frontend on port **3000**.
+
+### Manual setup (fallback)
+
+<details>
+<summary>Expand for step-by-step instructions</summary>
+
+**Terminal 1 — Backend**
 
 ```powershell
 cd backend
@@ -71,7 +99,7 @@ cp .env.example .env                  # edit .env — see Configuration below
 python run.py                         # http://127.0.0.1:8000  ·  Swagger /docs
 ```
 
-### Terminal 2 — Frontend
+**Terminal 2 — Frontend**
 
 ```powershell
 cd frontend
@@ -79,9 +107,7 @@ npm install
 npm run dev                           # http://localhost:3000
 ```
 
-Open **http://localhost:3000**, click **New Game**, fill in a profile and wait ~60-90 s for generation (or use **Continue** to resume a saved game instantly). The demo persona **Alex Johnson · Junior Software Engineer** exercises all 9 biomes, all NPC roles, all quest types, and all 4 challenge types.
-
-> **CORS** is preconfigured on the backend for `http://localhost:3000` and `http://127.0.0.1:3000`. Always run the frontend on port **3000**.
+</details>
 
 ---
 
