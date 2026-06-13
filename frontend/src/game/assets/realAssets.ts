@@ -21,6 +21,7 @@ import {
   LG_DIRS,
   NEXUS_TILE_FILE,
   PROP_FILES,
+  WILDERNESS_TREES,
   charFrameFile,
   charFrameKey,
   usedCharPrefixes,

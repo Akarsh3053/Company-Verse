@@ -33,6 +33,15 @@ export class LandmarkEntity {
     this.landmark = landmark;
     this.region = region;
 
+    // Phase 4D: Ground platform — a biome-coloured ellipse underneath the
+    // landmark sprite so buildings look grounded, not floating on the terrain.
+    const platformColor = region ? parseInt(region.color.replace("#", ""), 16) : 0x6b7060;
+    const platformGraphics = scene.add.graphics().setDepth(y - 2);
+    platformGraphics.fillStyle(platformColor, 0.45);
+    platformGraphics.fillEllipse(x, y + 4, 80, 28);
+    platformGraphics.fillStyle(0x000000, 0.18);
+    platformGraphics.fillEllipse(x, y + 8, 70, 16); // shadow
+
     this.sprite = scene.add
       .image(x, y, landmarkSprite(landmark.landmark_type))
       .setOrigin(0.5, 0.9)

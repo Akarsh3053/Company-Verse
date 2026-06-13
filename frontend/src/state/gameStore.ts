@@ -379,7 +379,12 @@ export const useGameStore = create<GameState>((set, get) => {
       const { bundle, questStatus, objectives } = get();
       if (!bundle) return;
       for (const quest of bundle.quests) {
-        if (questStatus[quest.id] !== "active") continue;
+        const status = questStatus[quest.id];
+        // Fire for both "active" AND "complete" quests:
+        // the final report-back talk objective is satisfied when the player
+        // returns to the NPC after the challenge is done (the quest may already
+        // be in "complete" state at that point due to all other objectives done).
+        if (status !== "active" && status !== "complete") continue;
         for (const obj of quest.objectives) {
           if (
             obj.type === "talk" &&

@@ -81,7 +81,21 @@ export default function QuestTracker({ bundle }: QuestTrackerProps) {
         if (region) nav = `Head to ${region.name}`;
       }
     } else if (nextObj) {
-      if (nextObj.target_npc_id) {
+      // Special case: if the only remaining objective is a post-challenge
+      // report-back talk, show a distinct "Report back" hint.
+      const allChallengesDone = (current.challenge_ids ?? []).every(
+        (id) => completedChallenges[id]
+      );
+      const isReportBack =
+        nextObj.type === "talk" &&
+        allChallengesDone &&
+        current.objectives.filter((o) => !objectives[o.id]).length === 1;
+
+      if (isReportBack && nextObj.target_npc_id) {
+        const npc = lookups?.npcById.get(nextObj.target_npc_id);
+        const region = lookups?.regionById.get(current.region_id);
+        if (npc) nav = `Report back to ${npc.name}${region ? ` in ${region.name}` : ""}`;
+      } else if (nextObj.target_npc_id) {
         const npc = lookups?.npcById.get(nextObj.target_npc_id);
         if (npc) {
           const region = lookups?.regionById.get(npc.region_id);

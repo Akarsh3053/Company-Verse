@@ -55,10 +55,28 @@ export class OverworldScene extends Phaser.Scene {
     this.physics.world.setBounds(b.minX, b.minY, b.width, b.height);
     this.cameras.main.setBounds(b.minX, b.minY, b.width, b.height);
 
-    // Player at their spawn, tinted by avatar_color.
-    const spawn = this.bundle.player.spawn;
+    // Player spawns inside their home region (entrance facing the nexus),
+    // not at the world centre nexus — makes the home region feel like YOUR town.
+    const homeRegion = this.bundle.world.regions.find(
+      (r) => r.id === this.bundle.player.home_region_id,
+    );
+    const worldSpawn = this.bundle.player.spawn;
+    let spawnX = worldSpawn.x;
+    let spawnY = worldSpawn.y;
+    if (homeRegion) {
+      // Place the player at the home region centre offset toward the nexus by
+      // ~40% of the region radius, so they appear near the entrance path.
+      const nx = worldSpawn.x; // nexus / world spawn
+      const ny = worldSpawn.y;
+      const rx = homeRegion.position.x;
+      const ry = homeRegion.position.y;
+      const angle = Math.atan2(ny - ry, nx - rx); // angle toward nexus
+      const RADIUS = REGION_SAFE_RADIUS * 0.4;
+      spawnX = Math.round(rx + Math.cos(angle) * RADIUS);
+      spawnY = Math.round(ry + Math.sin(angle) * RADIUS);
+    }
     const tint = parseTint(this.bundle.player.avatar_color);
-    this.player = new Player(this, spawn.x, spawn.y, tint);
+    this.player = new Player(this, spawnX, spawnY, tint);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setZoom(1.0);
 
@@ -79,7 +97,7 @@ export class OverworldScene extends Phaser.Scene {
     this.bindEvents();
 
     // Seed the starting region (so a spawn-region objective can complete).
-    const startRegion = this.world.regionAt(spawn.x, spawn.y);
+    const startRegion = this.world.regionAt(spawnX, spawnY);
     if (startRegion) {
       this.currentRegionId = startRegion.id;
       useGameStore.getState().recordExploreRegion(startRegion.id);

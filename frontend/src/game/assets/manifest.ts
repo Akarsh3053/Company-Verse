@@ -69,50 +69,96 @@ export interface PropSpec {
   height: number;
 }
 
-/** Per-biome prop palette. worldBuilder scatters a few of these per region. */
+/** Per-biome prop palette. worldBuilder scatters these per region (inner) and as wilderness border (outer). */
 export const BIOME_PROPS: Record<string, PropSpec[]> = {
   citadel: [
     { key: "prop_rock_gray", height: 34 },
+    { key: "prop_rock_gray", height: 28 },
     { key: "prop_steprock", height: 30 },
+    { key: "prop_steprock", height: 24 },
     { key: "prop_bush_small", height: 26 },
+    { key: "prop_rock_brown", height: 30 },
   ],
   valley: [
     { key: "prop_tree_olive", height: 70 },
+    { key: "prop_tree_olive", height: 60 },
+    { key: "prop_tree_autumn", height: 65 },
     { key: "prop_bush_med", height: 32 },
+    { key: "prop_bush_tall", height: 38 },
     { key: "prop_grass", height: 22 },
+    { key: "prop_flower_white", height: 20 },
+    { key: "prop_flower_yellow", height: 20 },
   ],
   bazaar: [
     { key: "prop_cactus", height: 40 },
+    { key: "prop_cactus", height: 36 },
     { key: "prop_rock_brown", height: 32 },
+    { key: "prop_rock_gray", height: 28 },
+    { key: "prop_bush_small", height: 22 },
   ],
   mountains: [
-    { key: "prop_rock_gray", height: 40 },
+    { key: "prop_rock_gray", height: 44 },
+    { key: "prop_rock_gray", height: 36 },
+    { key: "prop_rock_brown", height: 40 },
     { key: "prop_steprock", height: 34 },
+    { key: "prop_steprock", height: 28 },
+    { key: "prop_bush_small", height: 22 },
   ],
   highlands: [
     { key: "prop_bush_med", height: 32 },
+    { key: "prop_bush_tall", height: 38 },
+    { key: "prop_bush_small", height: 24 },
     { key: "prop_grass", height: 22 },
+    { key: "prop_grass", height: 18 },
     { key: "prop_rock_gray", height: 30 },
+    { key: "prop_flower_yellow", height: 20 },
   ],
   glades: [
-    { key: "prop_tree_lime", height: 74 },
+    { key: "prop_tree_lime", height: 80 },
+    { key: "prop_tree_lime", height: 70 },
+    { key: "prop_tree_lime", height: 65 },
+    { key: "prop_tree_autumn", height: 70 },
     { key: "prop_flower_purple", height: 24 },
-    { key: "prop_mushroom", height: 26 },
+    { key: "prop_flower_purple", height: 20 },
+    { key: "prop_flower_white", height: 20 },
+    { key: "prop_mushroom", height: 28 },
+    { key: "prop_mushroom", height: 22 },
   ],
   harbor: [
-    { key: "prop_rock_brown", height: 32 },
+    { key: "prop_rock_brown", height: 36 },
+    { key: "prop_rock_brown", height: 28 },
     { key: "prop_bush_small", height: 26 },
+    { key: "prop_bush_med", height: 30 },
+    { key: "prop_grass", height: 20 },
   ],
   sanctuary: [
     { key: "prop_flower_white", height: 24 },
+    { key: "prop_flower_white", height: 20 },
     { key: "prop_flower_yellow", height: 24 },
+    { key: "prop_flower_purple", height: 22 },
     { key: "prop_bush_med", height: 30 },
+    { key: "prop_bush_small", height: 22 },
+    { key: "prop_grass", height: 18 },
   ],
   frontier: [
-    { key: "prop_mushroom_evil", height: 28 },
+    { key: "prop_mushroom_evil", height: 32 },
+    { key: "prop_mushroom_evil", height: 24 },
     { key: "prop_rock_gray", height: 32 },
+    { key: "prop_rock_brown", height: 28 },
   ],
 };
+
+/** Props to use as wilderness border (outer ring of world, away from regions). */
+export const WILDERNESS_TREES: PropSpec[] = [
+  { key: "prop_tree_autumn", height: 80 },
+  { key: "prop_tree_olive", height: 80 },
+  { key: "prop_tree_lime", height: 80 },
+  { key: "prop_tree_autumn", height: 72 },
+  { key: "prop_tree_olive", height: 72 },
+  { key: "prop_bush_tall", height: 42 },
+  { key: "prop_bush_tall", height: 38 },
+  { key: "prop_rock_gray", height: 36 },
+];
 
 // ── Characters: backend sprite_type → Last Guardian prefix ───────────────────
 // Each prefix has 8 frames: <prefix>_<dir><frame>.gif, dir∈{fr,bk,lf,rt}, frame∈{1,2}.

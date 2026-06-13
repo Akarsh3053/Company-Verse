@@ -14,10 +14,10 @@ import {
   biomePalette,
   biomeTileset,
 } from "./assetMap";
-import { BIOME_PROPS } from "./assets/manifest";
+import { BIOME_PROPS, WILDERNESS_TREES } from "./assets/manifest";
 import { NpcEntity } from "./entities/NpcEntity";
 import { LandmarkEntity } from "./entities/LandmarkEntity";
-import { computeWorldBounds, type WorldBounds } from "./worldGeometry";
+import { computeWorldBounds, REGION_PIXEL_RADIUS, type WorldBounds } from "./worldGeometry";
 
 // Depth ordering (higher = in front). Connections MUST be below region patches
 // so paths only appear between regions, not over them.
@@ -44,6 +44,7 @@ export interface BuiltWorld {
 
 export function buildWorld(scene: Phaser.Scene, bundle: GameBundle): BuiltWorld {
   const { world } = bundle;
+  const homeRegionId = bundle.player.home_region_id;
   const bounds = computeWorldBounds(world);
 
   // ── Base ground: a warm earthy overworld that makes the whole map feel like ──
@@ -77,12 +78,13 @@ export function buildWorld(scene: Phaser.Scene, bundle: GameBundle): BuiltWorld 
 
   // ── Region patches (drawn AFTER connections, covering path ends). ──────────
   for (const region of world.regions) {
-    paintRegion(scene, region);
+    paintRegion(scene, region, region.id === homeRegionId);
   }
 
   // ── Nexus (company HQ plaza) at the world spawn. ───────────────────────────
   drawNexus(scene, world.spawn.x, world.spawn.y, world.metadata.company_name);
-
+  // ── Wilderness: dense tree border ringing the whole world. ────────────────
+  plantWilderness(scene, bounds, world.metadata.world_id);
   // ── Landmarks. ─────────────────────────────────────────────────────────────
   const landmarks: LandmarkEntity[] = [];
   for (const region of world.regions) {
@@ -126,21 +128,33 @@ export function buildWorld(scene: Phaser.Scene, bundle: GameBundle): BuiltWorld 
   return { bounds, npcs, landmarks, regionAt };
 }
 
-function paintRegion(scene: Phaser.Scene, region: Region): void {
+function paintRegion(scene: Phaser.Scene, region: Region, isHome = false): void {
   const tint = hexToNumber(region.color);
-  const size = REGION_RADIUS * 2;
+  // Home region is 30% larger than normal regions, making it visually dominant.
+  const radiusMult = isHome ? 1.3 : 1.0;
+  const R = REGION_RADIUS * radiusMult;
+  const size = R * 2;
   const x = region.position.x;
   const y = region.position.y;
 
   // Rounded plot border (slightly larger, darker) for a "tile plot" frame.
   const border = scene.add.graphics().setDepth(DEPTH_REGION - 1);
   border.fillStyle(Phaser.Display.Color.IntegerToColor(tint).darken(40).color, 1);
-  border.fillRoundedRect(x - REGION_RADIUS - 6, y - REGION_RADIUS - 6, size + 12, size + 12, 26);
+  border.fillRoundedRect(x - R - 6, y - R - 6, size + 12, size + 12, 26);
+
+  // Home region: add a gold outer glow ring to distinguish it at a glance.
+  if (isHome) {
+    const glow = scene.add.graphics().setDepth(DEPTH_REGION - 2);
+    glow.lineStyle(8, 0xfacc15, 0.55);
+    glow.strokeRoundedRect(x - R - 16, y - R - 16, size + 32, size + 32, 32);
+    glow.lineStyle(4, 0xfde68a, 0.3);
+    glow.strokeRoundedRect(x - R - 24, y - R - 24, size + 48, size + 48, 36);
+  }
 
   // Shared rounded-rect mask for the ground + colour overlay.
   const maskShape = scene.make.graphics({}, false);
   maskShape.fillStyle(0xffffff);
-  maskShape.fillRoundedRect(x - REGION_RADIUS, y - REGION_RADIUS, size, size, 22);
+  maskShape.fillRoundedRect(x - R, y - R, size, size, 22);
   const mask = maskShape.createGeometryMask();
 
   // Biome ground at its NATURAL colour (real terrain tiles or procedural).
@@ -149,59 +163,143 @@ function paintRegion(scene: Phaser.Scene, region: Region): void {
     .setDepth(DEPTH_REGION);
   ground.setMask(mask);
 
-  // Subtle region-colour wash for identity (keeps terrain readable, unlike a
-  // full multiply tint which muddies real art).
+  // Colour wash: home region brighter (0.28 alpha) so it reads as special.
+  const overlayAlpha = isHome ? 0.28 : 0.16;
   const overlay = scene.add
-    .rectangle(x, y, size, size, tint, 0.16)
+    .rectangle(x, y, size, size, tint, overlayAlpha)
     .setDepth(DEPTH_REGION + 1);
   overlay.setMask(mask);
 
-  // Decorative props scattered in an outer ring (avoid the central NPC ring).
-  placeRegionProps(scene, region, x, y);
+  // Phase 4B: Soft circular edge — a radial gradient circle blends the biome
+  // into the surrounding wilderness instead of a hard rectangular cutoff.
+  // Painted as concentric circles at DEPTH_REGION, outside the mask radius.
+  paintRegionEdgeGlow(scene, x, y, R, tint);
+
+  // Phase 4A: Dense ground-cover interior — 80 tiny props in the inner zone
+  // (5–38% radius) so the region interior doesn’t look like an empty field.
+  placeGroundCover(scene, region, x, y, R);
+
+  // Outer ring props (existing: 24 items at 42–98% radius).
+  placeRegionProps(scene, region, x, y, R);
 
   // Region label (icon + name) near the top of the plot.
+  // Home region label is larger and gold to immediately catch the eye.
+  const labelColor = isHome ? "#facc15" : "#ffffff";
+  const labelSize = isHome ? "18px" : "15px";
   const label = scene.add
-    .text(x, y - REGION_RADIUS + 14, `${region.icon} ${region.name}`, {
+    .text(x, y - R + 14, `${region.icon} ${region.name}${isHome ? " ★" : ""}`, {
       fontFamily: "monospace",
-      fontSize: "15px",
-      color: "#ffffff",
+      fontSize: labelSize,
+      color: labelColor,
       align: "center",
       stroke: "#0b1020",
-      strokeThickness: 4,
+      strokeThickness: isHome ? 5 : 4,
     })
     .setOrigin(0.5, 0.5)
     .setDepth(DEPTH_REGION_LABEL);
   label.setShadow(0, 2, "#000000", 3, true, true);
 }
 
-/** Scatter biome-appropriate prop sprites (real art, scaled), or dots if missing. */
+/** Scatter biome-appropriate prop sprites — outer ring only (existing 24 items). */
 function placeRegionProps(
   scene: Phaser.Scene,
   region: Region,
   x: number,
   y: number,
+  R = REGION_RADIUS,
 ): void {
   const specs = BIOME_PROPS[region.biome] ?? BIOME_PROPS.frontier ?? [];
+  if (!specs.length) return;
   const rand = mulberry(region.id);
-  const count = 8;
-  for (let i = 0; i < count; i++) {
+  // 24 props: inner ring (60-80% radius) and outer fringe (85-98% radius).
+  const INNER = 16;
+  const OUTER = 8;
+  for (let i = 0; i < INNER + OUTER; i++) {
+    const outer = i >= INNER;
+    const minR = outer ? 0.85 : 0.42;
+    const maxR = outer ? 0.98 : 0.78;
     const angle = rand() * Math.PI * 2;
-    const dist = REGION_RADIUS * (0.6 + rand() * 0.34);
+    const dist = R * (minR + rand() * (maxR - minR));
     const px = x + Math.cos(angle) * dist;
     const py = y + Math.sin(angle) * dist;
 
-    const spec = specs.length ? specs[Math.floor(rand() * specs.length)] : null;
+    const spec = specs[Math.floor(rand() * specs.length)];
     if (spec && scene.textures.exists(spec.key)) {
       const img = scene.add.image(px, py, spec.key).setOrigin(0.5, 0.96).setDepth(py);
       const src = scene.textures.get(spec.key).getSourceImage() as { height: number };
-      const scale = spec.height / (src.height || spec.height);
+      // Outer fringe props slightly smaller for depth perspective.
+      const sizeAdj = outer ? 0.85 : 1.0;
+      const scale = (spec.height / (src.height || spec.height)) * sizeAdj;
       img.setScale(scale);
     } else {
-      // Procedural fallback: a small palette-coloured dot.
       const g = scene.add.graphics().setDepth(DEPTH_REGION + 2);
       g.fillStyle(biomePalette(region.biome).prop, 0.85);
       g.fillCircle(px, py, 3 + rand() * 3);
     }
+  }
+}
+
+/**
+ * Phase 4A: Dense ground-cover pass — 80 tiny props (grass tufts, small flowers,
+ * pebbles) scattered across the interior of the region (5–38% radius).
+ * Uses props that are visually small so they don’t compete with NPCs.
+ */
+function placeGroundCover(
+  scene: Phaser.Scene,
+  region: Region,
+  cx: number,
+  cy: number,
+  R: number,
+): void {
+  // Ground-cover specs per biome: very small items only.
+  const COVER_SPECS: Record<string, Array<{ key: string; h: number }>> = {
+    valley:    [{ key: "prop_grass", h: 14 }, { key: "prop_flower_white", h: 14 }, { key: "prop_flower_yellow", h: 14 }],
+    highlands: [{ key: "prop_grass", h: 14 }, { key: "prop_flower_yellow", h: 14 }],
+    glades:    [{ key: "prop_flower_purple", h: 14 }, { key: "prop_flower_white", h: 14 }, { key: "prop_mushroom", h: 16 }],
+    sanctuary: [{ key: "prop_flower_white", h: 14 }, { key: "prop_flower_yellow", h: 14 }, { key: "prop_flower_purple", h: 14 }],
+    harbor:    [{ key: "prop_grass", h: 12 }],
+    citadel:   [{ key: "prop_rock_gray", h: 12 }, { key: "prop_steprock", h: 12 }],
+    mountains: [{ key: "prop_rock_gray", h: 16 }, { key: "prop_steprock", h: 14 }],
+    bazaar:    [{ key: "prop_rock_brown", h: 12 }],
+    frontier:  [{ key: "prop_mushroom_evil", h: 14 }],
+  };
+  const specs = COVER_SPECS[region.biome] ?? COVER_SPECS.valley;
+  const rand = mulberry(region.id + ":cover");
+  for (let i = 0; i < 80; i++) {
+    const angle = rand() * Math.PI * 2;
+    const dist = R * (0.05 + rand() * 0.33); // 5–38% of radius (inner zone)
+    const px = cx + Math.cos(angle) * dist;
+    const py = cy + Math.sin(angle) * dist;
+    const spec = specs[Math.floor(rand() * specs.length)];
+    if (!scene.textures.exists(spec.key)) continue;
+    const img = scene.add.image(px, py, spec.key).setOrigin(0.5, 0.96).setDepth(py - 0.5);
+    const src = scene.textures.get(spec.key).getSourceImage() as { height: number };
+    img.setScale((spec.h / (src.height || spec.h)) * (0.6 + rand() * 0.4));
+    img.setAlpha(0.55 + rand() * 0.35); // slightly transparent so terrain reads through
+  }
+}
+
+/**
+ * Phase 4B: Soft circular glow around the region edge — concentric circles
+ * fading from the biome colour outward into transparency so biomes blend into
+ * the wilderness instead of hard-cutting.
+ */
+function paintRegionEdgeGlow(
+  scene: Phaser.Scene,
+  cx: number,
+  cy: number,
+  R: number,
+  tint: number,
+): void {
+  const g = scene.add.graphics().setDepth(DEPTH_REGION - 1);
+  // 5 concentric circles, each slightly outside the region, decreasing alpha.
+  const steps = 5;
+  for (let i = 1; i <= steps; i++) {
+    const radius = R + i * 12;
+    const alpha = 0.22 - i * 0.04; // 0.18 -> 0.02
+    if (alpha <= 0) break;
+    g.lineStyle(14, tint, alpha);
+    g.strokeCircle(cx, cy, radius);
   }
 }
 
@@ -212,14 +310,38 @@ function drawConnection(
   type: "road" | "bridge",
 ): void {
   const g = scene.add.graphics().setDepth(DEPTH_CONNECTION);
-  // Thin, clean paths. Region patches (depth DEPTH_REGION) sit on top, so the
-  // path is only visible in the open land between region circles.
   const border = type === "bridge" ? 0x3d2008 : 0x4a3010;
   const fill = type === "bridge" ? 0x7a5520 : 0xa07840;
-  g.lineStyle(10, border, 1);
+  const edge = type === "bridge" ? 0x5a3510 : 0x705828;
+
+  // Road shadow.
+  g.lineStyle(14, 0x1a1008, 0.35);
+  g.lineBetween(a.position.x, a.position.y + 3, b.position.x, b.position.y + 3);
+  // Road border.
+  g.lineStyle(12, border, 1);
   g.lineBetween(a.position.x, a.position.y, b.position.x, b.position.y);
-  g.lineStyle(6, fill, 1);
+  // Road fill.
+  g.lineStyle(7, fill, 1);
   g.lineBetween(a.position.x, a.position.y, b.position.x, b.position.y);
+
+  // Dashes along the road centre for a Pokémon-style dirt path texture.
+  const dist = Phaser.Math.Distance.Between(a.position.x, a.position.y, b.position.x, b.position.y);
+  const steps = Math.max(2, Math.floor(dist / 28));
+  g.lineStyle(1.5, edge, 0.55);
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    const mx = Phaser.Math.Linear(a.position.x, b.position.x, t);
+    const my = Phaser.Math.Linear(a.position.y, b.position.y, t);
+    const ang = Phaser.Math.Angle.Between(a.position.x, a.position.y, b.position.x, b.position.y);
+    const perp = ang + Math.PI / 2;
+    // Perpendicular dash mark every 28px.
+    if (i % 2 === 0) {
+      g.lineBetween(
+        mx + Math.cos(perp) * 2.5, my + Math.sin(perp) * 2.5,
+        mx - Math.cos(perp) * 2.5, my - Math.sin(perp) * 2.5,
+      );
+    }
+  }
 }
 
 function drawNexus(scene: Phaser.Scene, x: number, y: number, company: string): void {
@@ -274,6 +396,83 @@ function drawNexus(scene: Phaser.Scene, x: number, y: number, company: string): 
     })
     .setOrigin(0.5, 0.5)
     .setDepth(DEPTH_NEXUS + 1);
+}
+
+// ── Depth for wilderness props (below region patches but above connection lines) ──
+const DEPTH_WILDERNESS = -92000;
+
+/**
+ * Plant 80 trees/bushes around the outer boundary of the world — rings the map
+ * with a dense forest border so it feels bounded like a Pokémon route.
+ * Seeded from world_id for stability across re-renders.
+ */
+function plantWilderness(
+  scene: Phaser.Scene,
+  bounds: WorldBounds,
+  seed: string,
+): void {
+  const rand = mulberry(seed + ":wilderness");
+  const cx = bounds.minX + bounds.width / 2;
+  const cy = bounds.minY + bounds.height / 2;
+  const hw = bounds.width / 2;
+  const hh = bounds.height / 2;
+  // Inner safe radius: don't plant inside the region ring.
+  const SAFE_R = 480;
+
+  const placed: Array<{ x: number; y: number }> = [];
+
+  for (let attempt = 0; attempt < 800 && placed.length < 90; attempt++) {
+    // Random position anywhere in the world bounds.
+    const px = bounds.minX + rand() * bounds.width;
+    const py = bounds.minY + rand() * bounds.height;
+
+    // Skip if inside the central safe zone (regions + nexus).
+    const dCenter = Math.hypot(px - cx, py - cy);
+    if (dCenter < SAFE_R) continue;
+
+    // Skip if within the padding strip that's purely off-screen.
+    const fromEdgeX = Math.min(px - bounds.minX, bounds.maxX - px);
+    const fromEdgeY = Math.min(py - bounds.minY, bounds.maxY - py);
+    if (fromEdgeX > 120 && fromEdgeY > 120) continue; // only near the outer edge
+
+    // Avoid clustering: keep at least 50px from any already-placed tree.
+    const tooClose = placed.some((p) => Math.hypot(p.x - px, p.y - py) < 50);
+    if (tooClose) continue;
+
+    placed.push({ x: px, y: py });
+    const spec = WILDERNESS_TREES[Math.floor(rand() * WILDERNESS_TREES.length)];
+    if (!scene.textures.exists(spec.key)) continue;
+    const img = scene.add.image(px, py, spec.key).setOrigin(0.5, 0.96).setDepth(DEPTH_WILDERNESS);
+    const src = scene.textures.get(spec.key).getSourceImage() as { height: number };
+    const baseScale = spec.height / (src.height || spec.height);
+    // Slight random scale variation for natural look.
+    img.setScale(baseScale * (0.85 + rand() * 0.3));
+  }
+
+  // Also ring the outer edge with a second denser pass of small bushes/rocks.
+  for (let attempt = 0; attempt < 600 && placed.length < 160; attempt++) {
+    const edge = Math.floor(rand() * 4);
+    let px: number, py: number;
+    const margin = 30 + rand() * 60;
+    if (edge === 0) { px = bounds.minX + margin; py = bounds.minY + rand() * bounds.height; }
+    else if (edge === 1) { px = bounds.maxX - margin; py = bounds.minY + rand() * bounds.height; }
+    else if (edge === 2) { px = bounds.minX + rand() * bounds.width; py = bounds.minY + margin; }
+    else { px = bounds.minX + rand() * bounds.width; py = bounds.maxY - margin; }
+
+    const tooClose = placed.some((p) => Math.hypot(p.x - px, p.y - py) < 40);
+    if (tooClose) continue;
+
+    placed.push({ x: px, y: py });
+    // Alternate between tall and medium trees for depth layering.
+    const key = rand() < 0.6 ? "prop_tree_autumn" : rand() < 0.5 ? "prop_tree_olive" : "prop_bush_tall";
+    if (!scene.textures.exists(key)) continue;
+    const img = scene.add.image(px, py, key).setOrigin(0.5, 0.96).setDepth(DEPTH_WILDERNESS + 1);
+    const src = scene.textures.get(key).getSourceImage() as { height: number };
+    img.setScale((72 / (src.height || 72)) * (0.8 + rand() * 0.35));
+  }
+
+  // Suppress unused-variable lint for the geometry helpers.
+  void hw; void hh;
 }
 
 /** Place an NPC on a ring inside its region, spread evenly to avoid overlap. */

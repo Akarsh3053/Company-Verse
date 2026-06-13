@@ -29,40 +29,75 @@ from app.utils.text import markdown_section_titles
 
 # role keyword -> team name (must match a world region's ``source_team``).
 # Specific roles are listed before generic engineering so "frontend"/"devops"
-# win over a bare "engineer".
+# win over a bare "engineer". Add new roles here; each entry is a
+# (lowercase_substring, team_name) pair matched against persona.role.lower().
 _ROLE_TEAM_RULES: tuple[tuple[str, str], ...] = (
+    # Frontend / UI
     ("frontend", "Frontend Engineering"),
     ("front-end", "Frontend Engineering"),
     ("ui engineer", "Frontend Engineering"),
+    ("ui developer", "Frontend Engineering"),
+    # DevOps / Infrastructure
     ("devops", "DevOps & Infrastructure"),
     ("sre", "DevOps & Infrastructure"),
     ("site reliability", "DevOps & Infrastructure"),
     ("infrastructure", "DevOps & Infrastructure"),
+    ("cloud engineer", "DevOps & Infrastructure"),
+    ("reliability", "DevOps & Infrastructure"),
+    # Platform / Backend Engineering
     ("platform", "Platform Engineering"),
-    ("security", "Platform Engineering"),
+    ("security engineer", "Platform Engineering"),
+    ("backend", "Platform Engineering"),
+    # Data & Analytics — listed before generic "analyst" so data roles win
     ("data scientist", "Data & Analytics"),
     ("data engineer", "Data & Analytics"),
     ("data analyst", "Data & Analytics"),
+    ("analytics engineer", "Data & Analytics"),
     ("analytics", "Data & Analytics"),
-    ("data ", "Data & Analytics"),
+    ("data ", "Data & Analytics"),       # "data " (with space) avoids false positives
+    ("business intelligence", "Data & Analytics"),
+    ("bi analyst", "Data & Analytics"),
+    ("bi developer", "Data & Analytics"),
+    ("reporting analyst", "Data & Analytics"),
+    # Business / Operations analysts → Product Management (strategy-adjacent)
+    ("business analyst", "Product Management"),
+    ("business systems analyst", "Product Management"),
+    ("operations analyst", "Product Management"),
+    ("systems analyst", "Product Management"),
+    ("process analyst", "Product Management"),
+    # Design & UX
     ("ux", "Design & UX"),
     ("designer", "Design & UX"),
     ("design", "Design & UX"),
+    ("ui/ux", "Design & UX"),
+    # Product Management
     ("product manager", "Product Management"),
     ("product management", "Product Management"),
+    ("product owner", "Product Management"),
+    ("po", "Product Management"),
     ("pm", "Product Management"),
+    ("program manager", "Product Management"),
+    ("project manager", "Product Management"),
+    # Sales & Revenue
     ("account executive", "Sales & Revenue"),
+    ("account manager", "Sales & Revenue"),
     ("sales", "Sales & Revenue"),
     ("revenue", "Sales & Revenue"),
     ("sdr", "Sales & Revenue"),
+    ("bdr", "Sales & Revenue"),
+    ("business development", "Sales & Revenue"),
+    # Customer Success
     ("customer success", "Customer Success"),
+    ("customer support", "Customer Success"),
     ("support", "Customer Success"),
     ("csm", "Customer Success"),
-    # Generic engineering fallbacks (checked last).
-    ("backend", "Platform Engineering"),
+    ("customer experience", "Customer Success"),
+    # Generic engineering fallbacks (checked last — most specific rules must come first)
     ("software", "Platform Engineering"),
     ("developer", "Platform Engineering"),
     ("engineer", "Platform Engineering"),
+    # Generic analyst fallback — after all specific analyst types above
+    ("analyst", "Data & Analytics"),
 )
 
 _EXPERIENCE_RULES: tuple[tuple[str, str], ...] = (

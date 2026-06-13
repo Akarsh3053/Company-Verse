@@ -91,7 +91,7 @@ class BundleEngine:
         # Dialogue depends on the finalized quests (offer/active/complete wiring).
         dialogues = await self._dialogue.generate(ctx, plan.cast_npcs, quests)
 
-        personalized_world = self._personalize_world(world, ctx.home_region.id)
+        personalized_world = self._personalize_world(world, ctx.home_region.id, persona.user_key)
         player = self._build_player(persona, plan, backstory)
         metadata = self._build_metadata(
             persona=persona,
@@ -137,13 +137,63 @@ class BundleEngine:
     # Assembly helpers
     # ------------------------------------------------------------------ #
     @staticmethod
-    def _personalize_world(world: World, home_region_id: str) -> World:
-        """Return a copy of the world with spawn moved to the player's home region."""
+    def _personalize_world(world: World, home_region_id: str, user_key: str) -> World:
+        """Return a world copy personalised for this player:
+        - Spawn moved to the home region.
+        - All region + landmark positions rotated by a per-player angle offset
+          (derived from user_key hash) so every player's world has a unique
+          compass orientation — same company, different perspective.
+        """
+        import math
+
         personalized = world.model_copy(deep=True)
+
+        # Move spawn to home region centre.
         for region in personalized.regions:
             if region.id == home_region_id:
                 personalized.spawn = region.position.model_copy()
                 break
+
+        # Per-player ring rotation: hash user_key to an angle in [0, 2π).
+        # Use 8 discrete steps (one per region slot) so the geometry stays clean.
+        key_hash = int(hashlib.md5(user_key.encode()).hexdigest(), 16)
+        SLOTS = 8
+        step_angle = (2 * math.pi) / SLOTS
+        rotation = (key_hash % SLOTS) * step_angle  # 0°, 45°, 90°, … 315°
+
+        if abs(rotation) < 1e-9:
+            return personalized  # no rotation needed for slot 0
+
+        cx, cy = world.metadata.world_id and (1200, 900)  # world centre
+        # Derive from actual spawn/centre — use world spawn before home override.
+        cx = round(
+            sum(r.position.x for r in world.regions) / len(world.regions)
+        )
+        cy = round(
+            sum(r.position.y for r in world.regions) / len(world.regions)
+        )
+
+        def rotate(x: int, y: int) -> tuple[int, int]:
+            dx, dy = x - cx, y - cy
+            nx = round(cx + dx * math.cos(rotation) - dy * math.sin(rotation))
+            ny = round(cy + dx * math.sin(rotation) + dy * math.cos(rotation))
+            return nx, ny
+
+        for region in personalized.regions:
+            rx, ry = rotate(region.position.x, region.position.y)
+            region.position.x = rx
+            region.position.y = ry
+            for lm in region.landmarks:
+                lx, ly = rotate(lm.position.x, lm.position.y)
+                lm.position.x = lx
+                lm.position.y = ly
+
+        # Re-pin spawn to the (now-rotated) home region.
+        for region in personalized.regions:
+            if region.id == home_region_id:
+                personalized.spawn = region.position.model_copy()
+                break
+
         return personalized
 
     @staticmethod

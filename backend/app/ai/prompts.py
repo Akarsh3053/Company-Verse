@@ -67,24 +67,50 @@ def quest(ctx: GenerationContext, seed: QuestSeed) -> tuple[str, str]:
         f"Summary: {seed.doc_summary}\n"
         f"Real sections: {', '.join(seed.section_titles) or 'n/a'}\n"
         f"Quest giver: {seed.giver_npc_name or 'a regional guide'} in {seed.region_name}.\n\n"
-        "Design one onboarding quest grounded ONLY in this document. Return JSON: "
+        "Design one onboarding quest grounded ONLY in this document. "
+        "The quest MUST have EXACTLY these 4 objectives in this order:\n"
+        "  1. type=\"talk\"    — Introduce the mission: meet the NPC giver and hear the briefing.\n"
+        "  2. type=\"read\"    — Study the relevant material: read the key sections of the document in the region.\n"
+        "  3. type=\"challenge\" — Prove understanding: complete the knowledge challenge.\n"
+        "  4. type=\"talk\"    — Report back: return to the NPC giver and confirm completion.\n"
+        "Each description must be specific to the document content, grounded and vivid.\n"
+        "Return JSON: "
         '{"title": string, "summary": string, "narrative": string, '
-        '"objectives": [{"description": string, "type": '
-        '"talk"|"explore"|"challenge"|"read"|"decision"}], "tags": [string]}. '
-        "Provide 3-4 objectives that progress talk -> learn -> prove."
+        '"objectives": ['
+        '{"description": string, "type": "talk"}, '
+        '{"description": string, "type": "read"}, '
+        '{"description": string, "type": "challenge"}, '
+        '{"description": string, "type": "talk"}'
+        '], "tags": [string]}.'
     )
     return _STYLE, user
 
 
 def challenge(ctx: GenerationContext, seed: QuestSeed) -> tuple[str, str]:
+    # For medium/hard quests, prefer scenario/decision challenges for richer play.
+    difficulty = seed.difficulty
+    if difficulty in ("medium", "hard"):
+        type_hint = '"decision" or "scenario"'
+        scenario_note = (
+            'For "decision" type, write a realistic workplace scenario the joiner '
+            'would actually face. Each option should be a plausible choice with '
+            'meaningful different feedback explaining real consequences. '
+        )
+    else:
+        type_hint = '"quiz" or "scenario"'
+        scenario_note = ""
+
     user = (
         f"{_persona_block(ctx)}\n\n"
         f"Grounding document: {seed.doc_title}.\n"
         f"Summary: {seed.doc_summary}\n"
         f"Real sections: {', '.join(seed.section_titles) or 'n/a'}\n\n"
-        "Write ONE multiple-choice challenge that tests understanding of this "
-        "document. Exactly one option must be correct; every option needs short "
-        "feedback explaining why. Return JSON: "
+        f"Write ONE multiple-choice challenge of type {type_hint} that tests "
+        "understanding of this document. "
+        f"{scenario_note}"
+        "Exactly one option must be correct; every option needs short "
+        "feedback explaining why it is right or wrong based on the document. "
+        "Return JSON: "
         '{"type": "quiz"|"decision"|"scenario", "title": string, "prompt": string, '
         '"scenario": string|null, "options": [{"text": string, "is_correct": bool, '
         '"feedback": string}], "explanation": string}. Provide exactly 4 options.'
@@ -104,7 +130,12 @@ def npc_dialogue(
         f"NPC: {npc_name}. Persona: {npc_persona}.\n"
         f"Quests this NPC gives:\n{quest_lines}\n\n"
         "Write this NPC's branching dialogue, addressing the joiner by name and "
-        "staying in character. Return JSON: {\"greeting\": string, \"info_lines\": "
+        "staying in character. "
+        "The quest_complete line is ESPECIALLY important: it must feel like a "
+        "genuine reward moment — the NPC acknowledges what the player learned, "
+        "gives a specific piece of practical wisdom from the document, "
+        "and sets up the next step of the player's journey with energy. 2-3 sentences. "
+        "Return JSON: {\"greeting\": string, \"info_lines\": "
         '[string], "quest_offer": string|null, "quest_active": string|null, '
         '"quest_complete": string|null, "knowledge_tidbits": [string]}.'
     )

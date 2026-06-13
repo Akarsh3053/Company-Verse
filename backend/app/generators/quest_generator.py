@@ -86,6 +86,7 @@ class QuestGenerator:
                     challenge_id=challenge_id,
                     prev_id=prev_id,
                     next_id=next_id,
+                    ctx=ctx,
                 )
             )
         return quests, challenges
@@ -120,8 +121,9 @@ class QuestGenerator:
         challenge_id: str,
         prev_id: str | None,
         next_id: str | None,
+        ctx: GenerationContext,
     ) -> Quest:
-        objectives = self._build_objectives(quest_id, seed, draft, challenge_id)
+        objectives = self._build_objectives(quest_id, seed, draft, challenge_id, ctx)
         reward = self._build_reward(seed, next_id)
         return Quest(
             id=quest_id,
@@ -148,9 +150,12 @@ class QuestGenerator:
         seed: QuestSeed,
         draft: QuestDraft,
         challenge_id: str,
+        ctx: GenerationContext,
     ) -> list[QuestObjective]:
         objectives: list[QuestObjective] = []
         has_challenge = False
+        last_talk_index: int | None = None   # track so we can post-process it
+
         for i, obj in enumerate(draft.objectives):
             objective = QuestObjective(
                 id=f"{quest_id}-obj-{i + 1}",
@@ -160,6 +165,7 @@ class QuestGenerator:
             if obj.type == "talk":
                 objective.target_npc_id = seed.giver_npc_id
                 objective.target_region_id = seed.region_id
+                last_talk_index = len(objectives)
             elif obj.type in ("read", "explore"):
                 objective.target_region_id = seed.region_id
                 objective.knowledge_doc_ids = [seed.doc_id]
@@ -178,6 +184,61 @@ class QuestGenerator:
                     challenge_id=challenge_id,
                 )
             )
+
+        # Phase 3B: Intel-gathering for medium/hard quests.
+        # Insert explore objectives for up to 2 landmarks in the quest region
+        # BEFORE the challenge. This forces the player to physically visit key
+        # systems/projects in the region before they can take the knowledge test,
+        # making the quest feel like genuine exploration rather than just a quiz.
+        if seed.difficulty in ("medium", "hard"):
+            region = next(
+                (r for r in ctx.regions if r.id == seed.region_id), None
+            )
+            if region and region.landmarks:
+                # Pick the most relevant-sounding landmarks (up to 2).
+                intel_landmarks = sorted(
+                    region.landmarks,
+                    key=lambda lm: lm.criticality or "",
+                )[:2]
+                # Insert them BEFORE the challenge objective.
+                challenge_idx = next(
+                    (i for i, o in enumerate(objectives) if o.type in ("challenge", "decision")),
+                    len(objectives),
+                )
+                for j, lm in enumerate(intel_landmarks):
+                    intel_obj = QuestObjective(
+                        id=f"{quest_id}-intel-{j + 1}",
+                        description=(
+                            f"Inspect the {lm.name} in {region.name} "
+                            f"to understand its role before taking the challenge."
+                        ),
+                        type="explore",
+                        target_landmark_id=lm.id,
+                        target_region_id=seed.region_id,
+                    )
+                    objectives.insert(challenge_idx + j, intel_obj)
+
+        # Phase 3A: report-back loop.
+        # After the challenge, always add a final "talk" objective that returns
+        # the player to the quest giver.  This creates the narrative closure loop:
+        # meet NPC → learn → prove knowledge → report back → NPC rewards you.
+        # Only add it if the last non-trivial objective was a challenge/decision
+        # (i.e. we didn't already end on a talk).
+        last = objectives[-1] if objectives else None
+        if last and last.type not in ("talk",):
+            objectives.append(
+                QuestObjective(
+                    id=f"{quest_id}-obj-{len(objectives) + 1}",
+                    description=(
+                        f"Return to {seed.giver_npc_name or 'your guide'} "
+                        f"in {seed.region_name} and share what you learned."
+                    ),
+                    type="talk",
+                    target_npc_id=seed.giver_npc_id,
+                    target_region_id=seed.region_id,
+                )
+            )
+
         return objectives
 
     @staticmethod

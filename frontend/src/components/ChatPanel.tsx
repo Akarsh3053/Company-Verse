@@ -21,6 +21,14 @@ export default function ChatPanel({ bundle, npcId, onClose }: ChatPanelProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus the input on mount so keyboard events land here instead of
+  // firing game hotkeys (WASD, E, Q, J etc).
+  useEffect(() => {
+    const id = window.setTimeout(() => inputRef.current?.focus(), 80);
+    return () => window.clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -114,10 +122,14 @@ export default function ChatPanel({ bundle, npcId, onClose }: ChatPanelProps) {
 
       <div className="flex gap-2 border-t-2 border-frame p-3">
         <input
+          ref={inputRef}
           className="cv-input"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
+            // Stop propagation so game hotkeys (WASD, E, Q, J etc) don't fire
+            // while the player is typing.
+            e.stopPropagation();
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               send();

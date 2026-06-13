@@ -202,30 +202,44 @@ export default function ChallengeModal({
         ) : (
           /* ── Single-select (quiz / decision / scenario) ─────────────────── */
           <div className="flex flex-col gap-2">
-            {shuffled.map((opt) => {
+            {shuffled.map((opt, idx) => {
               const isPicked = selectedId === opt.id;
               const reveal = committed;
-              const stateClass = reveal
-                ? opt.is_correct
-                  ? "border-success"
-                  : isPicked
-                    ? "border-danger"
-                    : "opacity-60"
-                : isPicked
-                  ? "border-accent"
-                  : "";
+
+              // Border + background computed explicitly — cv-panel-raised border must
+              // be overridden via style= (Tailwind classes lose to the CSS rule).
+              let borderColor = "#3b4a78";
+              let bgColor = "transparent";
+              let dimmed = false;
+              if (!reveal && isPicked) {
+                borderColor = "#facc15"; // gold = selected
+                bgColor = "rgba(250,204,21,0.08)";
+              } else if (reveal) {
+                if (opt.is_correct) { borderColor = "#22c55e"; bgColor = "rgba(34,197,94,0.08)"; }
+                else if (isPicked) { borderColor = "#ef4444"; bgColor = "rgba(239,68,68,0.08)"; }
+                else { dimmed = true; } // wrong unchosen options — dim them
+              }
+
               return (
                 <div key={opt.id}>
                   <button
-                    className={`cv-panel-raised w-full p-3 text-left ${stateClass}`}
+                    className="cv-panel-raised w-full p-3 text-left transition-colors"
+                    style={{ borderColor, background: bgColor, opacity: dimmed ? 0.45 : 1 }}
                     disabled={committed}
                     onClick={() => setSelectedId(opt.id)}
                   >
-                    <span className="cv-body text-lg text-slate-100">
-                      {reveal && opt.is_correct ? "✓ " : ""}
-                      {reveal && isPicked && !opt.is_correct ? "✗ " : ""}
-                      {opt.text}
-                    </span>
+                    <div className="flex items-start gap-3">
+                      {/* Selection indicator */}
+                      <span
+                        className="cv-heading mt-0.5 shrink-0 text-[0.55rem]"
+                        style={{ color: borderColor }}
+                      >
+                        {!reveal && isPicked ? "●" : reveal && opt.is_correct ? "✓" : reveal && isPicked ? "✗" : `${idx + 1}.`}
+                      </span>
+                      <span className="cv-body text-lg text-slate-100">
+                        {opt.text}
+                      </span>
+                    </div>
                   </button>
                   {reveal && isPicked && opt.feedback && (
                     <p

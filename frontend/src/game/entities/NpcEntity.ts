@@ -8,7 +8,7 @@ import * as Phaser from "phaser";
 import type { NPC } from "@/types/bundle";
 import { npcSprite } from "../assetMap";
 import { resolveCharPrefix } from "../assets/realAssets";
-import { charFrameKey } from "../assets/manifest";
+import { charFrameKey, walkAnimKey } from "../assets/manifest";
 
 const INDICATOR_GLYPH: Record<string, string> = {
   available: "❗",
@@ -18,24 +18,34 @@ const INDICATOR_GLYPH: Record<string, string> = {
 
 export class NpcEntity {
   readonly npc: NPC;
-  readonly sprite: Phaser.GameObjects.Image;
+  // Use Sprite (not Image) so walk animations can play.
+  readonly sprite: Phaser.GameObjects.Sprite;
   private nameplate: Phaser.GameObjects.Container;
   private indicator: Phaser.GameObjects.Text;
+  private bobOffset = 0;
+  private readonly baseY: number;
 
   constructor(scene: Phaser.Scene, npc: NPC, x: number, y: number) {
     this.npc = npc;
+    this.baseY = y;
 
-    // Prefer real character art (front-facing idle frame); else procedural.
+    // Prefer real character art; else procedural texture key.
     const prefix = resolveCharPrefix(scene, npc.sprite_type);
     const textureKey = prefix
       ? charFrameKey(prefix, "fr", 1)
       : npcSprite(npc.sprite_type);
 
     this.sprite = scene.add
-      .image(x, y, textureKey)
+      .sprite(x, y, textureKey)
       .setOrigin(0.5, 0.85)
       .setDepth(y);
     if (prefix) this.sprite.setScale(1.6);
+
+    // Play a slow idle walk animation (front-facing, 2 frames, 2fps) so the
+    // NPC looks alive without actually moving around.
+    if (prefix && scene.anims.exists(walkAnimKey(prefix, "fr"))) {
+      this.sprite.play({ key: walkAnimKey(prefix, "fr"), frameRate: 2, repeat: -1 });
+    }
 
     // Quest indicator above the head (hidden until set).
     this.indicator = scene.add
@@ -78,10 +88,15 @@ export class NpcEntity {
     this.indicator.setVisible(true);
   }
 
-  /** Gentle idle float for the indicator so it draws the eye. */
+  /** Gentle idle bob + indicator float so the NPC feels alive. */
   pulse(time: number): void {
+    // Subtle body bob (±2px) using a slow sine — each NPC offset by their id.
+    const hash = Array.from(this.npc.id).reduce((a, c) => a + c.charCodeAt(0), 0);
+    this.bobOffset = Math.sin(time * 0.0025 + hash) * 2;
+    this.sprite.y = this.baseY + this.bobOffset;
+
     if (this.indicator.visible) {
-      this.indicator.y = this.sprite.y - 46 + Math.sin(time * 0.004) * 3;
+      this.indicator.y = this.sprite.y - 58 + Math.sin(time * 0.004) * 3;
     }
   }
 
