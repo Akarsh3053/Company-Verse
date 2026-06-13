@@ -1,5 +1,9 @@
 # CompanyVerse
 
+<p align="center">
+  <img src="https://github.com/Akarsh3053/Company-Verse/blob/7b3248b67bfcdf245ace1280da18d25fc1adfdf6/frontend/public/assets/Company%20Verse.png?raw=true" alt="CompanyVerse banner" width="100%" />
+</p>
+
 > **Microsoft Agents League · Hackathon Track 1 — Creative Apps**
 
 Turn a company's real knowledge into a **personalised, playable onboarding game**. A new joiner enters their name, email, role and a few goals; CompanyVerse generates an entire top-down 2D world from the organisation's documents — teams become explorable regions, experts become NPC guides, systems become landmarks, and processes become quests. Everything is AI-generated and grounded in real enterprise knowledge. Nothing is hardcoded.
